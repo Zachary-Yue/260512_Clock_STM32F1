@@ -1,0 +1,295 @@
+
+#include "dx_bt37.h"
+#include <stdarg.h>
+#include "debug.h"
+#include "sys_err.h"
+#include "user_phr.h"
+
+#define TAG "DX_BT37"
+
+#define DX_BT37_DELAY(ms) LL_mDelay(ms)
+
+static const uint32_t dx_bt37_baud_rates[DX_BT37_BAUD_MAX] = {
+    2400, 4800, 9600, 19200, 38400, 57600, 115200, 230400, 460800, 921600, 1000000
+};
+
+#define DX_BT37_VSNPRINTF_BUF_SIZE 1000
+#define DX_BT37_WAIT_MAX 1000
+
+static bool dx_bt37_test_com(dx_bt37_t *bt37);
+
+/**
+ * @brief DX_BT37 初始化，自动波特率检测。可以用来 reinit。
+ * 
+ * @note tx_buf（发送缓冲区）是一次发送数据的临时存储空间，DX_BT37 会从 tx_fifo 中读取数据到 tx_buf 中，
+ *   然后通过 UART 发送出去。tx_buf 的大小决定了每次能发送的最大数据量，如果 tx_buf 太小可能会导致发送效率低下，
+ *   因为需要频繁地从 tx_fifo 中读取数据并发送。建议 tx_buf_size 至少为 64 字节，以适应大多数应用场景。
+ * 
+ * @param bt37   BT37 句柄
+ * @param config 初始化配置，用户需要配置每一个字段。
+ */
+bool dx_bt37_init(dx_bt37_t *bt37, dx_bt37_config_t *config)
+{
+    CHECK_FALSE_RET(bt37 && config, false);
+    CHECK_FALSE_RET(config->uart_send && config->tx_buf && config->tx_buf_size &&
+        config->tx_fifo_buf && config->tx_fifo_buf_size, false);
+
+    LOGI(TAG, "Starting initialize DX_BT37...");
+
+    // Set default values and copy configuration
+    memset(bt37, 0, sizeof(dx_bt37_t));
+    bt37->uart_send = config->uart_send;
+    bt37->uart_recv = config->uart_recv;
+    bt37->baud = DX_BT37_BAUD_9600;
+    bt37->tx_buf = config->tx_buf;
+    bt37->tx_buf_size = config->tx_buf_size;
+    user_fifo_init(&bt37->tx_fifo, config->tx_fifo_buf, config->tx_fifo_buf_size);
+
+    LOGI(TAG, "Starting auto baud rate detection...");
+    uart_abort(bt37->uart_send, bt37->uart_recv); // 确保 UART 处于空闲状态
+
+    // auto baud rate detection
+    u8 baud_index = DX_BT37_BAUD_2400;
+    while (baud_index < DX_BT37_BAUD_MAX) {
+        LOGI(TAG, "Testing baud rate: %lu", dx_bt37_baud_rates[baud_index]);
+        uart_change_baud(bt37->uart_send->Instance, dx_bt37_baud_rates[baud_index]);
+        if (dx_bt37_test_com(bt37))
+        {
+            LOGI(TAG, "Baud rate detected: %lu", dx_bt37_baud_rates[baud_index]);
+            bt37->baud = baud_index;
+            bt37->is_init = true;
+            break;
+        }
+        baud_index++;
+        debug_send();   // 再不发的话 debug 缓冲区要被写满了，无奈之举
+    }
+
+    bt37->is_init = (baud_index < DX_BT37_BAUD_MAX);
+
+    CHECK_FALSE_RET_LOG(bt37->is_init, false, TAG,
+        "Failed to detect baud rate. Init failed.");
+
+    bt37->rx_enabled = config->uart_recv && config->rx_buf && config->rx_buf_size &&
+        config->rx_proc_buf && config->rx_proc_buf_size;
+    if (bt37->rx_enabled) {
+        bt37->rx_buf = config->rx_buf;
+        bt37->rx_buf_size = config->rx_buf_size;
+        bt37->rx_proc_buf = config->rx_proc_buf;
+        bt37->rx_proc_buf_size = config->rx_proc_buf_size;
+        bt37->dx_bt37_rx_data_proc = config->dx_bt37_rx_data_proc;
+        uart_receive_start(bt37->uart_recv, bt37->rx_buf, true, bt37->rx_buf_size);
+    }
+
+    LOGI(TAG, "DX_BT37 initialized successfully.");
+    return true;
+}
+
+/**
+ * @brief DX_BT37 修改波特率。若修改失败会恢复到原来的波特率。
+ * 
+ * @param bt37  初始化过的 BT37 句柄
+ * @param baud  要修改的波特率，必须是 dx_bt37_baud_t 枚举类型中的值
+ * @return bool true 修改成功，false 修改失败（可能是通信失败或者波特率无效）
+ * 
+ * @note 由于需要阻塞等待模块重启和通信测试，这个函数大概需要 1 秒钟左右的时间才能完成。
+ */
+bool dx_bt37_change_baud(dx_bt37_t *bt37, dx_bt37_baud_t baud)
+{
+    CHECK_FALSE_RET(bt37 && baud < DX_BT37_BAUD_MAX, false);
+    CHECK_FALSE_RET(bt37->is_init, false);
+
+    LOGI(TAG, "Start changing baud rate to: %lu...", dx_bt37_baud_rates[baud]);
+    debug_send();
+
+#define TMP_BUF_SIZE 4
+    u8 old_baud_index = bt37->baud;
+    u8 tmp_buf[TMP_BUF_SIZE];
+
+    dx_bt37_send_all(bt37); // 确保命令发送完成
+    dx_bt37_printf(bt37, "AT+BAUD%X\r\n", baud + 1);
+    dx_bt37_send_all(bt37); // 确保命令发送完成
+    DX_BT37_DELAY(50); // 等待模块处理命令
+    dx_bt37_printf(bt37, "AT+RESET\r\n");
+    dx_bt37_send_all(bt37); // 确保命令发送完成
+
+    uart_abort(bt37->uart_send, bt37->uart_recv); // 确保 UART 处于空闲状态
+    uart_change_baud(bt37->uart_send->Instance, dx_bt37_baud_rates[baud]);
+    DX_BT37_DELAY(800); // 等待模块开机以及 UART 稳定
+
+    // 接收可能的残余数据，避免干扰后续通信
+    uart_receive_start(bt37->uart_recv, tmp_buf, false, TMP_BUF_SIZE);
+    DX_BT37_DELAY(20); // 等待数据接收完成
+
+    if (dx_bt37_test_com(bt37)) {
+        bt37->baud = baud;
+        LOGI(TAG, "Baud rate changed successfully to: %lu", dx_bt37_baud_rates[baud]);
+    } else {
+        // 恢复到原来的波特率
+        uart_abort(bt37->uart_send, bt37->uart_recv); // 确保 UART 处于空闲状态
+        uart_change_baud(bt37->uart_send->Instance, dx_bt37_baud_rates[old_baud_index]);
+        LOGE(TAG, "Failed to change baud rate to: %lu, reverted to: %lu",
+            dx_bt37_baud_rates[baud], dx_bt37_baud_rates[old_baud_index]);
+        return false;
+    }
+
+    if (bt37->rx_enabled) {
+        uart_receive_start(bt37->uart_recv, bt37->rx_buf, true, bt37->rx_buf_size);
+    }
+    return true;
+}
+
+/**
+ * @brief DX_BT37 发送数据。
+ * 
+ * @param bt37  BT37 句柄
+ * @param format 格式化字符串
+ * @param ...    可变参数，支持 printf 的格式化输出
+ */
+void dx_bt37_printf(dx_bt37_t *bt37, const char *format, ...)
+{
+    CHECK_FALSE_RET_VOID(bt37);
+    CHECK_FALSE_RET_VOID(bt37->is_init);
+    u8 printf_buf[DX_BT37_VSNPRINTF_BUF_SIZE];
+    va_list args;
+    va_start(args, format);
+    int len = vsnprintf((char *)printf_buf, DX_BT37_VSNPRINTF_BUF_SIZE, format, args);
+    va_end(args);
+    if (len <= 0) return;
+    if (len > DX_BT37_VSNPRINTF_BUF_SIZE) len = DX_BT37_VSNPRINTF_BUF_SIZE;
+    user_fifo_write(&bt37->tx_fifo, printf_buf, len);
+}
+
+/**
+ * @brief DX_BT37 发送数据，直接发送二进制数据，不进行格式化。
+ * 
+ * @param bt37  BT37 句柄
+ * @param data  要发送的二进制数据
+ * @param len   数据长度
+ */
+void dx_bt37_send_raw(dx_bt37_t *bt37, const u8 *data, u16 len)
+{
+    CHECK_FALSE_RET_VOID(bt37);
+    CHECK_FALSE_RET_VOID(bt37->is_init);
+    user_fifo_write(&bt37->tx_fifo, data, len);
+}
+
+/**
+ * @brief BT37 发送数据任务，放在主循环中。
+ * 
+ * @param bt37 BT37 句柄
+ */
+void dx_bt37_send(dx_bt37_t *bt37)
+{
+    CHECK_FALSE_RET_VOID(bt37->uart_send);
+    CHECK_FALSE_RET_VOID(bt37->is_init);
+    CHECK_FALSE_RET_VOID(!uart_is_sending(bt37->uart_send));
+    CHECK_FALSE_RET_VOID(user_fifo_get_used_length(&bt37->tx_fifo));
+    u16 len_to_send = user_fifo_get_used_length(&bt37->tx_fifo);
+    if (len_to_send > bt37->tx_buf_size) len_to_send = bt37->tx_buf_size; // 限制一次发送的数据量
+    user_fifo_read(&bt37->tx_fifo, bt37->tx_buf, len_to_send, USER_FIFO_READ_AND_CLEAN);
+    uart_send_start(bt37->uart_send, bt37->tx_buf, len_to_send);
+}
+
+/**
+ * @brief 将 BT37 发送缓冲区中的所有数据发送出去，直到发送完成或者没有数据了。这个函数会阻塞等待发送完成，慎用。
+ * 
+ * @param bt37 BT37 句柄
+ */
+void dx_bt37_send_all(dx_bt37_t *bt37)
+{
+    CHECK_FALSE_RET_VOID(bt37);
+    CHECK_FALSE_RET_VOID(bt37->is_init);
+    uart_send_wait(bt37->uart_send, DX_BT37_WAIT_MAX); // 等待当前发送完成
+    while (user_fifo_get_used_length(&bt37->tx_fifo) > 0) {
+        dx_bt37_send(bt37);
+        uart_send_wait(bt37->uart_send, DX_BT37_WAIT_MAX); // 等待当前发送完成
+    }
+}
+
+/**
+ * @brief 在接收结束的中断中调用。将接收到的数据拷贝到处理缓冲区中等待处理。
+ * 
+ * @param bt37 BT37 句柄
+ * @param len  本次接收到的长度
+ */
+void dx_bt37_rx_cplt_handler(dx_bt37_t *bt37, u16 len)
+{
+    CHECK_FALSE_RET_VOID(bt37 && len);
+    CHECK_FALSE_RET_VOID(bt37->is_init && bt37->rx_enabled);
+
+    // 将接收到的数据拷贝到处理缓冲区中
+    u16 proc_len = min(len, min(bt37->rx_buf_size, bt37->rx_proc_buf_size));
+    memset(bt37->rx_proc_buf, 0, bt37->rx_proc_buf_size);
+    memcpy(bt37->rx_proc_buf, bt37->rx_buf, proc_len);
+    bt37->rx_received_len = proc_len;
+    
+    // 启动下一次的 DMA 接收
+    // 设置数据待处理标志位
+    bt37->rx_wait_for_proc = true;
+}
+
+/**
+ * @brief 在 main 循环调用。当发现有数据待处理时，处理数据。
+ * 
+ * @param bt37 BT37 句柄
+ */
+void dx_bt37_recv(dx_bt37_t *bt37)
+{
+    CHECK_FALSE_RET_VOID(bt37);
+    CHECK_FALSE_RET_VOID(bt37->is_init && bt37->rx_enabled && bt37->dx_bt37_rx_data_proc);
+    CHECK_FALSE_RET_VOID(bt37->rx_wait_for_proc);
+    bt37->rx_wait_for_proc = false;
+    bt37->dx_bt37_rx_data_proc(bt37, bt37->rx_proc_buf, bt37->rx_received_len);
+}
+
+#define DX_BT37_TEST_STRING "AT\r\n"
+#define DX_BT37_TEST_RECV_STRING "OK\r\n"
+#define DX_BT37_TEST_RECV_BUF_SIZE 16
+#define DX_BT37_DISC_CMD "AT+DISC\r\n"
+
+/**
+ * @brief 给 BT37 发送 AT\r\n，通过判断回复是否为 OK\r\n 来判断模块收发是否正常。
+ * 
+ * @param bt37  BT37 句柄
+ * @return bool true 通信正常，false 通信异常
+ */
+static bool dx_bt37_test_com(dx_bt37_t *bt37)
+{
+    if (bt37 == NULL) return false;
+    u8 test_recv_string_buf[DX_BT37_TEST_RECV_BUF_SIZE];
+
+    memset(test_recv_string_buf, 0, sizeof(test_recv_string_buf));
+
+    uart_abort(bt37->uart_send, bt37->uart_recv);
+
+    CHECK_FALSE_RET(uart_send_start(bt37->uart_send,
+        (u8*)DX_BT37_TEST_STRING, lenof_cstr(DX_BT37_TEST_STRING)), false);
+    if (uart_send_wait(bt37->uart_send, 30) == false) {
+        uart_abort(bt37->uart_send, bt37->uart_recv);
+        return false;
+    }
+
+    CHECK_FALSE_RET(uart_receive_start(bt37->uart_recv,
+        test_recv_string_buf, false, DX_BT37_TEST_RECV_BUF_SIZE), false);
+    if (uart_recv_wait(bt37->uart_recv, 30) == false) {
+        uart_abort(bt37->uart_send, bt37->uart_recv);
+        return false;
+    }
+    return (begins_with_str((char*)test_recv_string_buf, DX_BT37_TEST_RECV_STRING) ? true : false);
+}
+
+
+/**
+ * @brief 断开 BT37 连接，发送 AT+DISC 命令。这个函数会阻塞等待发送完成，慎用。
+ * 
+ * @param bt37 BT37 句柄
+ */
+void dx_bt37_disconnect(dx_bt37_t *bt37)
+{
+    CHECK_FALSE_RET_VOID(bt37);
+    CHECK_FALSE_RET_VOID(bt37->is_init);
+    dx_bt37_send_all(bt37); // 确保发送完成
+    LL_mDelay(20); // 主动分包，避免 AT+DISC 命令和之前的命令一起发送导致模块不响应
+    dx_bt37_printf(bt37, DX_BT37_DISC_CMD);
+    dx_bt37_send_all(bt37); // 确保发送完成
+}
