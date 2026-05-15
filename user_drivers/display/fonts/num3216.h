@@ -4,7 +4,7 @@
 #include "user_def.h"
 
 typedef enum {
-    FONT_NUM3216_1 = 0, // MS Serif (Like Song font, print-like)
+    FONT_NUM3216_1 = 1, // MS Serif (Like Song font, print-like)
     FONT_NUM3216_2,     // MS Sans Serif (Like Hei font, print-like)
     FONT_NUM3216_3,     // MS Gothic (Like Kai font, print-like)
     FONT_NUM3216_4,     // MS Mincho (Like Fangsong font, print-like)

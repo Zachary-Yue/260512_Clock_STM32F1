@@ -114,7 +114,7 @@ static void s_message_parse_normal(const char *dat, u16 len)
     {
         if (len == 6 && '1' <= dat[5] && dat[5] <= '4')
         {
-            Time_FONT = (u8)(dat[5] - '1');
+            Time_FONT = (u8)(dat[5] - '0');
             parse_logi("Font is changed to font_%hd.", Time_FONT);
         }
         else parse_logi("Font is assumed to be numbered 1 ~ 4.");
