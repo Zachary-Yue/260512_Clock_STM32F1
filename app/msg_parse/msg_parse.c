@@ -611,15 +611,17 @@ static void s_message_parse_normal(const char *dat, u16 len)
         }
     }
 
+    #if 0
     /* Bluetooth */
     else if (begins_with_str(dat, "bt-baud")) {
         u32 baud = atoi((char*)dat + lenof_cstr("bt-baud") + 1);
         bt_change_baud(baud);
     }
     else if (begins_with_str(dat, "bt-reinit")) {
-        parse_logi("Starting BLE reinit...");
+        parse_logw("Starting BLE reinit...");
         bt_init();
     }
+    #endif
 
     /* Help */
     else if (begins_with_str(dat, "hello") || begins_with_str(dat, "help"))
