@@ -77,7 +77,8 @@ static void s_message_parse_normal(const char *dat, u16 len)
                 u8 res = app_music_play(tmp_num);
                 switch (res)
                 {
-                    case MUSIC_3V_Start_OK: parse_logi("Start playing music %d.", tmp_num); break;
+                    case MUSIC_3V_Start_OK: parse_logi("Start playing music %d: [%s].",
+                        tmp_num, ctrl.list[tmp_num]->name); break;
                     case MUSIC_3V_Start_ERROR_PARAM: parse_logi("Wrong parameter."); break;
                     case MUSIC_3V_Start_ERROR_NUM: parse_logi("Incorrect numbering."); break;
                     default: break;
@@ -289,7 +290,11 @@ static void s_message_parse_normal(const char *dat, u16 len)
             else if (begins_with_str(dat + 5, " ring"))
             {
                 int music_no;
-                if (sscanf(dat + 11, "%d", &music_no) == 1)
+                if (len == lenof_cstr("alarm ring") && Alarm_MusicNo != 0)
+                {
+                    parse_logi("Alarm ring is music %d: [%s].", Alarm_MusicNo, ctrl.list[Alarm_MusicNo]->name);
+                }
+                else if (sscanf(dat + 11, "%d", &music_no) == 1)
                 {
                     if (0 < music_no && music_no <= ctrl.list_size)
                     {
@@ -346,7 +351,11 @@ static void s_message_parse_normal(const char *dat, u16 len)
         else if (begins_with_str(dat + 5, " ring "))
         {
             int no;
-            if (sscanf(dat + 11, "%d", &no) == 1)
+            if (len == lenof_cstr("timer ring") && Timer_MusicNo != 0)
+            {
+                parse_logi("Timer ring is music %d: [%s].", Timer_MusicNo, ctrl.list[Timer_MusicNo]->name);
+            }
+            else if (sscanf(dat + 11, "%d", &no) == 1)
             {
                 if (0 < no && no <= ctrl.list_size)
                 {
