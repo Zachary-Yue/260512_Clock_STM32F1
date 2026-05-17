@@ -1,7 +1,7 @@
 
 #include "app_music.h"
 #include "tim.h"
-#include "freq/freq_table.h"
+#include "freq_table.h"
 #include "sys_err.h"
 #include "music_scores/music_scores.h"
 
@@ -79,6 +79,7 @@ static const music_3v_song_t *music_3v_list[] = {
     &m3v_GrainInEar,
     &m3v_music_06,
     &m3v_twinkle_star,
+    &m3v_CANON,
 };
 
 void app_music_init(void)

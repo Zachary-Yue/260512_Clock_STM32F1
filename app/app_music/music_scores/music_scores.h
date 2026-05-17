@@ -8,3 +8,4 @@
 #include "Rainbow.h"
 #include "HeadToFutureTogether.h"
 #include "ING.h"
+#include "Canon.h"

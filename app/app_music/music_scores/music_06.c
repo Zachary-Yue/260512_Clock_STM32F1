@@ -7,7 +7,7 @@ static const u8 main_m1[] =
 {
     REST, P2, D6, P1, D6, P1, G6, P1, A6, P1,
 
-    B6, P2, G6, P1_2, bG6, P1_2,
+    B6, P2, G6, P1_2, Fs6, P1_2,
 
     E6, P1 + P1_2, C7, P1_2, C7, P1,
 
@@ -18,13 +18,13 @@ static const u8 main_m1[] =
 
 static const u8 main_m2[] =
 {
-    G6, P1, bG6, P1, G6, P1,
+    G6, P1, Fs6, P1, G6, P1,
     A6, P2 + P1,
 };
 
 static const u8 main_m3[] =
 {
-    bG6, P1, G6, P1, A6, P1,
+    Fs6, P1, G6, P1, A6, P1,
     G6, P1 + P2,
 };
 
@@ -61,12 +61,12 @@ static const u8 c1_m2[] =
 
 static const u8 c1_m3[] =
 {
-    A4, P1_2, bD5, P1_2, E5, P1_2, bD5, P1_2, E5, P1_2, bD5, P1_2,
+    A4, P1_2, Cs5, P1_2, E5, P1_2, Cs5, P1_2, E5, P1_2, Cs5, P1_2,
 };
 
 static const u8 c1_m4[] =
 {
-    D5, P1_2, bG5, P1_2, A5, P1_2, bG5, P1_2, A5, P1_2, bG5, P1_2,
+    D5, P1_2, Fs5, P1_2, A5, P1_2, Fs5, P1_2, A5, P1_2, Fs5, P1_2,
 };
 
 static const u8 c1_m5[] =
@@ -115,11 +115,11 @@ static const u8 c2_m1[] =
 
     REST, P2, D6, P1,
 
-    D6, P1, G6, P1, bG6, P1,
+    D6, P1, G6, P1, Fs6, P1,
 
-    G6, P2, bG6, P1,
+    G6, P2, Fs6, P1,
 
-    E6, P4 + P1, bG6, P1,
+    E6, P4 + P1, Fs6, P1,
 
     G6, P1 + P1_2, A6, P1_2, B6, P1,
 

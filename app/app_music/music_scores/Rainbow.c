@@ -171,7 +171,7 @@ static const u8 c1_m4[] =
 
     F7, P4, REST, P2, F7, P1_2, E7, P1_2, D7, P1_2, C7, P1_2,
 
-    F7, P2, G7, P2, bA7, P4,
+    F7, P2, G7, P2, Gs7, P4,
 };
 
 static const u8 c1_m6_1[] =

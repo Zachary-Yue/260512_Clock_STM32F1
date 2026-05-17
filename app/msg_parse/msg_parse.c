@@ -78,7 +78,7 @@ static void s_message_parse_normal(const char *dat, u16 len)
                 switch (res)
                 {
                     case MUSIC_3V_Start_OK: parse_logi("Start playing music %d: [%s].",
-                        tmp_num, ctrl.list[tmp_num]->name); break;
+                        tmp_num, ctrl.list[tmp_num - 1]->name); break;
                     case MUSIC_3V_Start_ERROR_PARAM: parse_logi("Wrong parameter."); break;
                     case MUSIC_3V_Start_ERROR_NUM: parse_logi("Incorrect numbering."); break;
                     default: break;

@@ -2,8 +2,9 @@
 #include "freq_table.h"
 
 
-#define FTIM        (36000000.0f)
-#define ARRT(f)     ((u16)((FTIM / 2.0f / (f)) + 0.50f))
+#define FTIM_CLKIN (72000000.0f)
+#define FTIM_AFTER_PSC (FTIM_CLKIN / (MUSIC_TIM_PSC + 1.0f))
+#define ARRT(f) ((u16)((FTIM_AFTER_PSC / 2.0f / (f)) + 0.50f))
 
 /**
  * @brief 频率 - ARR 重装值对照表。
@@ -11,17 +12,26 @@
  */
 static const u16 FreqTab[] =
 {
-    0,                      // No C4
-    ARRT(277.182631f),      // bD4
+#if MUSIC_TIM_PSC >= 2
+    ARRT(184.9972114f),     // F#3
+    ARRT(195.997718f),      // G3
+    ARRT(207.6523488f),     // G#3
+    ARRT(220.0f),           // A3
+    ARRT(233.0818808f),     // A#3
+    ARRT(246.9416506f),     // B3
+
+    ARRT(261.6255653f),     // C4
+#endif
+    ARRT(277.182631f),      // sC4
     ARRT(293.6647679f),     // D4
-    ARRT(311.1269837f),
+    ARRT(311.1269837f),     // sD4
     ARRT(329.6275569f),     // E4
     ARRT(349.2282314f),     // F4
-    ARRT(369.9944227f),
+    ARRT(369.9944227f),     // sF4
     ARRT(391.995436f),      // G4
-    ARRT(415.3046976f),
+    ARRT(415.3046976f),     // sG4
     ARRT(440.0f),           // A4
-    ARRT(466.1637615f),
+    ARRT(466.1637615f),     // sA4
     ARRT(493.8833013f),     // B4
 
     ARRT(523.2511306f),     // C5
