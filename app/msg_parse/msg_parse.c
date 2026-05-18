@@ -16,9 +16,11 @@
 
 static u8 parse_state = 0;
 
+#define parse_printf(fmt, ...) bt_printf(fmt, ##__VA_ARGS__)
 #define parse_logi(fmt, ...) bt_printf(fmt "\r\n", ##__VA_ARGS__)
 #define parse_logw(fmt, ...) bt_printf("\r\nW: " fmt "\r\n\r\n", ##__VA_ARGS__)
 #define parse_loge(fmt, ...) bt_printf("\r\nE: " fmt "\r\n\r\n", ##__VA_ARGS__)
+#define parse_send_all()     bt_send_all()
 
 #define h_isInRange(h) ((u8)(h) < 100)
 #define m_isInRange(m) ((u8)(m) < 60)
@@ -28,6 +30,7 @@ static u8 parse_state = 0;
 #define STR_OFF "off"
 
 static void s_message_parse_normal(const char *dat, u16 len);
+static void slog_read(void);
 
 /**
  * @brief Parsing uart received data.
@@ -47,7 +50,7 @@ void app_message_parse(const char *dat, u16 len)
         if (begins_with_str(dat, "y") && len == 1)
         {
             parse_logw("System is resetting...");
-            bt_send_all();
+            parse_send_all();
             bt_disconnect();
             sys_reset();
         }
@@ -626,21 +629,36 @@ static void s_message_parse_normal(const char *dat, u16 len)
     /* Help */
     else if (begins_with_str(dat, "hello") || begins_with_str(dat, "help"))
     {
-        bt_send_all();
+        parse_send_all();
         parse_logi( "Hello! This is your lovely clock. Here are the commands:\r\n"
                     "\t(1) Music:\r\n\t\t(a) play [<num>] (b) stop (c) pause\r\n"
                     "\t(2) Pitch: pitch [<pitches>]\r\n");
-        bt_send_all();
+        parse_send_all();
         LL_mDelay(20);
         parse_logi( "\t(3) Pages: page <name>\r\n"
                     "\t(4) Time:\r\n\t\t(a) font <num> (b) set <...> (c) time (d) date\r\n"
                     "\t(5) Alarm: alarm <...>\r\n"
                     "\t(6) Timer: timer <...>\r\n");
-        bt_send_all();
+        parse_send_all();
         LL_mDelay(20);
         parse_logi( "\t(7) Watch: watch <...>\r\n"
                     "\t(8) Screen: (a) scr reinit (b) scr <on/off>\r\n"
                     "Type them with a space to see their instructions.");
+    }
+
+    /* Static Logs */
+    else if (begins_with_str(dat, "slog")) {
+        if (begins_with_str(dat + 4, " read")) {
+            slog_read();
+        } else if (begins_with_str(dat + 4, " dump")) {
+            debug_s_dump_logs(1024);
+            parse_logi("1K bytes of static logs have been dumped.");
+        } else if (begins_with_str(dat + 4, " clear")) {
+            debug_s_clear_logs();
+            parse_logi("Static logs have been cleared.");
+        } else {
+            parse_logi("[usage] slog read; slog dump; slog clear.");
+        }
     }
 
     /* Greetings */
@@ -669,4 +687,41 @@ static void s_message_parse_normal(const char *dat, u16 len)
     }
 
     // parse_logi("Recv: %.*s, len = %hd", len, dat, len);
+}
+
+#define SLOG_ONCE_READ_LEN 1024
+
+static void slog_read(void)
+{
+    u8 buf[SLOG_ONCE_READ_LEN];
+    u8 buf_send[130];
+    buf[0] = '\0';
+    s32 len = (s32)debug_get_slog_fifo_used_size();
+    bool log_more = len > SLOG_ONCE_READ_LEN;
+    len = min(len, SLOG_ONCE_READ_LEN);
+    if (len <= 0) {
+        parse_logi("No static logs.");
+    }
+    else {
+        u16 send_len = 0;
+        u16 send_p = 0;
+        debug_s_read_logs(buf, len);
+        parse_logi("\r\n--- Start of static logs ---\r\n");
+        while (len > 0 && send_p < SLOG_ONCE_READ_LEN) {
+            send_len = min(len, 128);
+            memcpy(buf_send, buf + send_p, send_len);
+            buf_send[send_len] = '\0';
+            parse_printf("%.*s", send_len, buf_send);
+            len -= send_len;
+            send_p += send_len;
+            parse_send_all();
+            LL_mDelay(20);
+        }
+        if (log_more) {
+            parse_logi("\r\n...\r\n\r\n--- Use \'slog dump\' to dump logs and to read more ---\r\n");
+        }
+        else {
+            parse_logi("\r\n--- End of static logs ---\r\n");
+        }
+    }
 }

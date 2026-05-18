@@ -11,6 +11,7 @@
 #define TAG "DEBUG"
 
 debugm_handle_t hdebug;
+debug_static_handle_t hdebug_static;
 
 #define DEBUG_TXFIFO_SIZE 1024      // 增加调试 FIFO 的大小，可以减少丢失调试信息的可能性
 #define DEBUG_TXBUF_SIZE 64         // 减小临时发送缓冲区大小的影响只是多发几次
@@ -22,6 +23,9 @@ static u8 debug_txbuf[DEBUG_TXBUF_SIZE];
 static u8 debug_rxbuf[DEBUG_RXBUF_SIZE];
 static u8 debug_rx_proc_buf[DEBUG_RXPROCBUF_SIZE];
 
+#define DEBUG_S_FIFO_SIZE 4096
+static u8 debug_s_fifo_buf[DEBUG_S_FIFO_SIZE];
+
 void debug_rx_dataproc_handler(u8 *data, u16 len);
 
 /**
@@ -30,6 +34,12 @@ void debug_rx_dataproc_handler(u8 *data, u16 len);
  */
 void debug_init(void)
 {
+    debug_static_config_t debug_static_cfg = {
+        .log_fifo_buf = debug_s_fifo_buf,
+        .log_fifo_size = DEBUG_S_FIFO_SIZE,
+    };
+    debug_static_init(&hdebug_static, &debug_static_cfg);
+
     debugm_config_t cfg = {
         .uart_send = &huart1_send,
         .uart_recv = &huart1_recv,

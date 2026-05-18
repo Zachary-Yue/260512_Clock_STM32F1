@@ -20,12 +20,14 @@
 #pragma once
 
 #include "debug_module.h"
+#include "debug_static.h"
 
 #define USE_DXBT37_AS_DEBUG_OUTPUT USE_DXBT37_AS_DEBUGM_OUTPUT
 
 // Must be initialized by user by calling debug_start()
 // before using LOGI, LOGW, LOGE macros.
 extern debugm_handle_t hdebug;
+extern debug_static_handle_t hdebug_static;
 
 // 需要第一个初始化 debug 模块
 void debug_init(void);
@@ -44,24 +46,24 @@ void debug_init(void);
 #endif
 
 #if LOG_ENABLE
-    #define LOGI(tag, fmt, ...) do { \
-        DEBUGM_LOGI(&hdebug, tag, fmt, ##__VA_ARGS__); \
-    } while (0)
-
-    #define LOGW(tag, fmt, ...) do { \
-        DEBUGM_LOGW(&hdebug, tag, fmt, ##__VA_ARGS__); \
-    } while (0)
-
-    #define LOGE(tag, fmt, ...) do { \
-        DEBUGM_LOGE(&hdebug, tag, fmt, ##__VA_ARGS__); \
-    } while (0)
-
-    #define LOGD(tag, fmt, ...) do { \
-        DEBUGM_LOGD(&hdebug, tag, fmt, ##__VA_ARGS__); \
-    } while (0)
+    #define LOGI(tag, fmt, ...) DEBUGM_LOGI(&hdebug, tag, fmt, ##__VA_ARGS__)
+    #define LOGW(tag, fmt, ...) DEBUGM_LOGW(&hdebug, tag, fmt, ##__VA_ARGS__)
+    #define LOGE(tag, fmt, ...) DEBUGM_LOGE(&hdebug, tag, fmt, ##__VA_ARGS__)
+    #define LOGD(tag, fmt, ...) DEBUGM_LOGD(&hdebug, tag, fmt, ##__VA_ARGS__)
 #else
     #define LOGI(...)
     #define LOGW(...)
     #define LOGE(...)
     #define LOGD(...)
 #endif
+
+/*-------------------------------- Static Log -------------------------------*/
+
+#define SLOGI(tag, fmt, ...) DEBUG_S_LOGI(&hdebug_static, tag, fmt, ##__VA_ARGS__)
+#define SLOGW(tag, fmt, ...) DEBUG_S_LOGW(&hdebug_static, tag, fmt, ##__VA_ARGS__)
+#define SLOGE(tag, fmt, ...) DEBUG_S_LOGE(&hdebug_static, tag, fmt, ##__VA_ARGS__)
+
+#define debug_get_slog_fifo_used_size()  user_fifo_get_used_length(&(hdebug_static.log_fifo))
+#define debug_s_read_logs(buf, len) debug_static_read_logs(&hdebug_static, buf, len)
+#define debug_s_dump_logs(len)      debug_static_dump_logs(&hdebug_static, len)
+#define debug_s_clear_logs()        debug_static_clear_logs(&hdebug_static)

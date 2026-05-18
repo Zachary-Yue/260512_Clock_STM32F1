@@ -93,8 +93,8 @@ void user_fifo_read(user_fifo_t *fifo, u8 *p_data, u16 len, user_fifo_read_opera
     u16 len_to_end;
 
     if (fifo == NULL || p_data == NULL || len == 0) return;  // 参数合法
-    if (fifo->lock == USER_FIFO_LOCK) return;                    // 没锁
-    if (len > user_fifo_get_used_length(fifo)) return;             // 长度合法
+    if (fifo->lock == USER_FIFO_LOCK) return;                // 没锁
+    if (len > user_fifo_get_used_length(fifo)) return;       // 长度合法
 
     fifo->lock = USER_FIFO_LOCK;     // 锁上
 

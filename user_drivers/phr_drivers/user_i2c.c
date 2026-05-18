@@ -4,6 +4,8 @@
 #include "debug.h"
 #include "user_tick.h"
 
+#define TAG "I2C"
+
 static I2C_SendCplt_CB_t sendCplt_cb = NULL;
 
 void i2c_send_setcb(I2C_SendCplt_CB_t callback)
@@ -156,6 +158,10 @@ void i2c_send_dmaCplt_handler(I2C_Send_t *hi2c)
             LL_DMA_DisableIT_TC(hi2c->DMA_Instance, hi2c->DMA_Channel);
         }
     }
+    if (user_dma_get_it_flag_te(hi2c->DMA_Instance, hi2c->DMA_Channel)) {
+        user_dma_clear_it_flag_te(hi2c->DMA_Instance, hi2c->DMA_Channel);
+        SLOGW(TAG, "DMA channel %u failed.");
+    }
 }
 
 /**
@@ -262,6 +268,7 @@ void i2c_error_handler(I2C_Send_t *hi2c)
          */
         hi2c->ErrorCode = User_I2C_ErrorCode_BERR;
         // i2c_send_abort(hi2c);
+        SLOGE(TAG, "BERR(a misplaced Start or Stop condition) occured.");
     }
     else if (LL_I2C_IsActiveFlag_AF(hi2c->Instance))
     {
@@ -271,6 +278,7 @@ void i2c_error_handler(I2C_Send_t *hi2c)
             hi2c->ErrorCode = User_I2C_ErrorCode_ARLO;
             // In master mode, generate a stop condition.
             // i2c_send_abort(hi2c);
+            SLOGE(TAG, "AF(Ack Failure) detected.");
         }
     }
     else if (LL_I2C_IsActiveFlag_OVR(hi2c->Instance))
@@ -278,8 +286,10 @@ void i2c_error_handler(I2C_Send_t *hi2c)
         LL_I2C_ClearFlag_OVR(hi2c->Instance);
         hi2c->ErrorCode = User_I2C_ErrorCode_OVR;
         // i2c_send_abort(hi2c);
+        SLOGE(TAG, "OVR(Overrun/underrun) err occurs.");
     }
 
     i2c_send_abort(hi2c);
+    SLOGW(TAG, "Transmission is aborted.");
     // I2C_Debug(hi2c);
 }
