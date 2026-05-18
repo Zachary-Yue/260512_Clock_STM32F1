@@ -4,7 +4,7 @@
 #include "debug.h"
 #include "user_tick.h"
 
-#define TAG "I2C"
+#define TAG "USER_I2C"
 
 static I2C_SendCplt_CB_t sendCplt_cb = NULL;
 
@@ -267,6 +267,7 @@ void i2c_error_handler(I2C_Send_t *hi2c)
          *  reset the handle's state.
          */
         hi2c->ErrorCode = User_I2C_ErrorCode_BERR;
+        LL_I2C_ClearFlag_BERR(hi2c->Instance);
         // i2c_send_abort(hi2c);
         SLOGE(TAG, "BERR(a misplaced Start or Stop condition) occured.");
     }

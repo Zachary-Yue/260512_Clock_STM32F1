@@ -4,6 +4,7 @@
 #include "user_tick.h"
 #include "sys_err.h"
 
+#define TAG "USER_UART"
 
 /*------------------------------------------- Transition Part -----------------------------------------*/
 
@@ -325,6 +326,11 @@ void uart_recv_dmaCplt_handler(UART_Recv_t *recv)
 			// Call the data process handler.
 			if (recvCplt_cb != NULL) recvCplt_cb(recv);
 		}
+	}
+	if (user_dma_get_it_flag_te(recv->DMA_Instance, recv->DMA_Channel))
+	{
+		user_dma_clear_it_flag_te(recv->DMA_Instance, recv->DMA_Channel);
+		SLOGE(TAG, "DMA channel %u failed.", recv->DMA_Channel);
 	}
 }
 
