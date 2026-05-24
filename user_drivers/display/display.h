@@ -26,3 +26,6 @@ void display_init(void);
 void display_subtrate(void);
 void display_task(void);
 void display_scr_on_off(bool on);
+void display_reinit_timer(void);
+u32  display_set_reinit_interval_h(u32 interval_h);
+u32  display_get_reinit_interval_h(void);

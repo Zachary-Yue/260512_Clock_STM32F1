@@ -608,9 +608,31 @@ static void s_message_parse_normal(const char *dat, u16 len)
             display_init();
             parse_logi("Reinit OK.");
         }
+        else if (begins_with_str(dat + 3, " ri")) {
+            if (len == lenof_cstr("scr ri")) {
+                parse_logi("Current reinit interval is %u hours.", display_get_reinit_interval_h());
+            }
+            else {
+                u32 interval;
+                if (sscanf(dat + 6, "%lu", &interval) == 1)
+                {
+                    interval = display_set_reinit_interval_h(interval);
+                    if (interval == 0) {
+                        parse_logi("Automatic reinitialization is turned off.");
+                    }
+                    else {
+                        parse_logi("Set reinit interval to %u hours.", interval);
+                    }
+                }
+                else
+                {
+                    parse_logi("[usage] scr ri <interval_h>. Set the interval of automatic reinitialization of the screen. Unit: hour.");
+                }
+            }
+        }
         else
         {
-            parse_logi("[usage] (1) scr <on/off>; (2) scr debug <on/off>; (3) scr reinit.");
+            parse_logi("[usage] (1) scr <on/off>; (2) scr debug <on/off>; (3) scr reinit; (4) scr ri <interval_h>.");
         }
     }
 
@@ -642,22 +664,22 @@ static void s_message_parse_normal(const char *dat, u16 len)
         parse_send_all();
         LL_mDelay(20);
         parse_logi( "\t(7) Watch: watch <...>\r\n"
-                    "\t(8) Screen: (a) scr reinit (b) scr <on/off>\r\n"
+                    "\t(8) Screen: (a) scr reinit (b) scr <on/off> (c) scr ri <interval_h>\r\n"
                     "Type them with a space to see their instructions.");
     }
 
     /* Static Logs */
     else if (begins_with_str(dat, "slog")) {
-        if (begins_with_str(dat + 4, " read")) {
+        if (begins_with_str(dat + 4, " read") || (begins_with_str(dat + 4, " r") && len == lenof_cstr("slog r"))) {
             slog_read();
-        } else if (begins_with_str(dat + 4, " dump")) {
+        } else if (begins_with_str(dat + 4, " dump") || (begins_with_str(dat + 4, " d") && len == lenof_cstr("slog d"))) {
             debug_s_dump_logs(1024);
             parse_logi("1K bytes of static logs have been dumped.");
-        } else if (begins_with_str(dat + 4, " clear")) {
+        } else if (begins_with_str(dat + 4, " clear") || (begins_with_str(dat + 4, " c") && len == lenof_cstr("slog c"))) {
             debug_s_clear_logs();
             parse_logi("Static logs have been cleared.");
         } else {
-            parse_logi("[usage] slog read; slog dump; slog clear.");
+            parse_logi("[usage] slog read/r; slog dump/d; slog clear/c.");
         }
     }
 

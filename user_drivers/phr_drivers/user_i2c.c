@@ -178,7 +178,9 @@ void i2c_send_it_handler(I2C_Send_t *hi2c)
          *  to DR, and the SB flag is to be cleared (by write to DR).
          */
         LL_I2C_TransmitData8(hi2c->Instance, hi2c->SlvAddr);
-        if (hi2c->State == User_I2C_State_START) hi2c->State = User_I2C_State_ADDR;
+        if (hi2c->State == User_I2C_State_START) {
+            hi2c->State = User_I2C_State_ADDR;
+        }
     }
     else if (LL_I2C_IsActiveFlag_ADDR(hi2c->Instance))
     {
@@ -292,5 +294,4 @@ void i2c_error_handler(I2C_Send_t *hi2c)
 
     i2c_send_abort(hi2c);
     SLOGW(TAG, "Transmission is aborted.");
-    // I2C_Debug(hi2c);
 }

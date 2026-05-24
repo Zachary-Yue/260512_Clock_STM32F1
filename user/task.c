@@ -14,13 +14,14 @@ typedef struct
 
 
 // 任务总数。每添加一个任务，记得修改这个宏定义
-#define TASK_TOTAL      2
+#define TASK_TOTAL      3
 
 // 任务列表
 Task_t Task[TASK_TOTAL] =
 {
     // ms, count, taskHook
     { 1000, 0, light_task },
+    { 1000, 0, display_reinit_timer },
     { 100, 0, display_task },
 };
 

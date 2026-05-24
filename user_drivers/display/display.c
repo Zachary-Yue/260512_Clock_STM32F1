@@ -88,10 +88,10 @@ void display_init(void)
         .i2c_addr = 0x78
     };
     if (i2c_oled_init(&oled, &cfg)) {
-        LOGI(TAG, "OLED initialized successfully");
+        LOGI(TAG, "Display initialized successfully");
         display_subtrate();
     } else {
-        LOGE(TAG, "Failed to initialize OLED");
+        LOGE(TAG, "Failed to initialize display");
     }
 }
 
@@ -102,4 +102,31 @@ void display_scr_on_off(bool on)
     } else {
         i2c_oled_scr_on_off(&oled, false);
     }
+}
+
+static u32 display_reinit_interval_s = 60*60*24; // 24 h
+static u32 display_reinit_cnt = 0;
+
+/* 定时重启显示屏，因为 I2C 容易死机 */
+void display_reinit_timer(void)
+{
+    if (display_reinit_interval_s == 0) return;
+    if (++display_reinit_cnt >= display_reinit_interval_s) {
+        display_reinit_cnt = 0;
+        LOGI(TAG, "Reinitializing display...");
+        display_init();
+    }
+}
+
+u32 display_set_reinit_interval_h(u32 interval_h)
+{
+    interval_h > (u32)(-1) / 3600 ? (interval_h = (u32)(-1) / 3600) : (void)0;
+    display_reinit_interval_s = interval_h * 3600;
+    display_reinit_cnt = 0;
+    return interval_h;
+}
+
+u32 display_get_reinit_interval_h(void)
+{
+    return display_reinit_interval_s / 3600;
 }
