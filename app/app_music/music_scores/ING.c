@@ -219,7 +219,7 @@ static const u8 c2_m1[] =
     E5, P1, REST, P1, G5, P1_2 + P1_4, F5, P1_4,
     E5, P1_2 + P1_4, F5, P1_4,
 
-    E5, P2, A5, P2,
+    E5, P2, REST, P2,
 
     REST, P2, A6, P1_2 + P1_4, G6, P1_4, A6, P1_2 + P1_4, B6, P1_4,
 
