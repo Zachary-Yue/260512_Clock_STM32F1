@@ -630,6 +630,10 @@ static void s_message_parse_normal(const char *dat, u16 len)
                 }
             }
         }
+        else if (begins_with_str(dat + 3, " err")) {
+            parse_logi("Display I2C error code: %d.", display_get_i2c_error_code());
+            parse_logi("Display I2C state: %d.", display_get_i2c_state());
+        }
         else
         {
             parse_logi("[usage] (1) scr <on/off>; (2) scr debug <on/off>; (3) scr reinit; (4) scr ri <interval_h>.");

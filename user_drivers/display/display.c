@@ -130,3 +130,13 @@ u32 display_get_reinit_interval_h(void)
 {
     return display_reinit_interval_s / 3600;
 }
+
+u32 display_get_i2c_error_code(void)
+{
+    return hi2c1.ErrorCode;
+}
+
+u32 display_get_i2c_state(void)
+{
+    return hi2c1.State;
+}

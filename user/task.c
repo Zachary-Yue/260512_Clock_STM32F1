@@ -36,7 +36,10 @@ void task_counter_inc(void)
     u8 i = 0;
     for (; i < TASK_TOTAL; i++)
     {
-        Task[i].count++;
+        if (Task[i].count < Task[i].period)
+        {
+            Task[i].count++;
+        }
     }
 }
 

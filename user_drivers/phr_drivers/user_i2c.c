@@ -182,7 +182,7 @@ void i2c_send_it_handler(I2C_Send_t *hi2c)
             hi2c->State = User_I2C_State_ADDR;
         }
     }
-    else if (LL_I2C_IsActiveFlag_ADDR(hi2c->Instance))
+    if (LL_I2C_IsActiveFlag_ADDR(hi2c->Instance))
     {
         /**
          *  Slave address has just been sent, and the data transfer is going to start.
@@ -221,7 +221,7 @@ void i2c_send_it_handler(I2C_Send_t *hi2c)
             i2c_send_abort(hi2c);
         }
     }
-    else if (LL_I2C_IsEnabledIT_BUF(hi2c->Instance) && LL_I2C_IsActiveFlag_TXE(hi2c->Instance))
+    if (LL_I2C_IsEnabledIT_BUF(hi2c->Instance) && LL_I2C_IsActiveFlag_TXE(hi2c->Instance))
     {
         if (hi2c->State == User_I2C_State_MEMADDR)
         {
@@ -233,7 +233,7 @@ void i2c_send_it_handler(I2C_Send_t *hi2c)
             i2c_send_abort(hi2c);
         }
     }
-    else if (LL_I2C_IsActiveFlag_BTF(hi2c->Instance))
+    if (LL_I2C_IsActiveFlag_BTF(hi2c->Instance))
     {
         /**
          *  The whole transmission process is completed.
@@ -273,7 +273,7 @@ void i2c_error_handler(I2C_Send_t *hi2c)
         // i2c_send_abort(hi2c);
         SLOGE(TAG, "BERR(a misplaced Start or Stop condition) occured.");
     }
-    else if (LL_I2C_IsActiveFlag_AF(hi2c->Instance))
+    if (LL_I2C_IsActiveFlag_AF(hi2c->Instance))
     {
         LL_I2C_ClearFlag_AF(hi2c->Instance);
         if (LL_I2C_IsActiveFlag_MSL(hi2c->Instance))
@@ -284,7 +284,7 @@ void i2c_error_handler(I2C_Send_t *hi2c)
             SLOGE(TAG, "AF(Ack Failure) detected.");
         }
     }
-    else if (LL_I2C_IsActiveFlag_OVR(hi2c->Instance))
+    if (LL_I2C_IsActiveFlag_OVR(hi2c->Instance))
     {
         LL_I2C_ClearFlag_OVR(hi2c->Instance);
         hi2c->ErrorCode = User_I2C_ErrorCode_OVR;
