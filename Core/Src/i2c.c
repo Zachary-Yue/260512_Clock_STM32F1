@@ -99,6 +99,12 @@ void MX_I2C1_Init(void)
 }
 
 /* USER CODE BEGIN 1 */
-
+void i2c1_reset(void)
+{
+  LL_I2C_EnableReset(I2C1);
+  LL_mDelay(1);
+  LL_I2C_DisableReset(I2C1);
+  MX_I2C1_Init();
+}
 /* USER CODE END 1 */
 

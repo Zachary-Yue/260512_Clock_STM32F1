@@ -70,6 +70,7 @@ bool i2c_oled_init(i2c_oled_t *oled, i2c_oled_cfg_t *cfg)
     oled->display_buf = cfg->display_buf;
     oled->i2c_mem_write_block = cfg->i2c_mem_write_block;
     oled->i2c_mem_write_dma = cfg->i2c_mem_write_dma;
+    oled->i2c_send_reset = cfg->i2c_send_reset;
     oled->display_buf_size = cfg->display_buf_size;
     oled->width = cfg->width;
     oled->height = cfg->height;
@@ -83,7 +84,7 @@ bool i2c_oled_init(i2c_oled_t *oled, i2c_oled_cfg_t *cfg)
     bool res = oled->i2c_mem_write_block(
         oled->i2c_addr, OLED_CONTROLBYTE_CMD_STREAM, (u8*)init, sizeof(init));
 
-    oled->is_init = res;
+    oled->is_init = true;
     return res;
 }
 

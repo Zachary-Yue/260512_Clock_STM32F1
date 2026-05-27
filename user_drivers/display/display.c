@@ -31,9 +31,9 @@ static bool i2c_mem_write_dma(u8 slvaddr, u8 memaddr, u8 *data, u16 len)
     return i2c_mem_write_start(&hi2c1, slvaddr, memaddr, data, len);
 }
 
-static void i2c_send_reset(void)
+static void i2c_reset(void)
 {
-    i2c_send_abort(&hi2c1);
+    display_init();
 }
 
 
@@ -75,13 +75,12 @@ void display_init(void)
 {
     LOGI(TAG, "Initializing display...");
 
-
-    DISPLAY_I2C_DEINIT();
+    i2c_send_abort(&hi2c1);
+    i2c1_reset();
     OLED_POWER_OFF();
-    LL_mDelay(100);
+    LL_mDelay(10);
     OLED_POWER_ON();
     LL_mDelay(10);
-    DISPLAY_I2C_INIT();
 
     i2c_oled_cfg_t cfg = {
         .display_buf = disp_buf,
@@ -91,7 +90,7 @@ void display_init(void)
         .width = 128,
         .height = 64,
         .i2c_addr = 0x78,
-        .i2c_send_reset = i2c_send_reset
+        .i2c_send_reset = i2c_reset
     };
     if (i2c_oled_init(&oled, &cfg)) {
         LOGI(TAG, "Display initialized successfully");

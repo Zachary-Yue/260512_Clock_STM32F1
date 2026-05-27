@@ -281,6 +281,14 @@ void i2c_send_it_handler(I2C_Send_t *hi2c)
             i2c_send_abort(hi2c);
         }
     }
+    if (LL_I2C_IsActiveFlag_STOP(hi2c->Instance))
+    {
+        /**
+         *  A Stop condition is detected, which means the end of current transmission.
+         *  Clear STOP flag and disable related interrupts, and reset handle state.
+         */
+        LL_I2C_ClearFlag_STOP(hi2c->Instance);
+    }
 }
 
 
