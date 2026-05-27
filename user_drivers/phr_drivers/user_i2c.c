@@ -8,11 +8,21 @@
 
 static I2C_SendCplt_CB_t sendCplt_cb = NULL;
 
+/**
+ * @brief Set the callback function to be called when a transmission is completed.
+ * 
+ * @param callback the callback function, which takes a pointer to the i2c handle as parameter
+ */
 void i2c_send_setcb(I2C_SendCplt_CB_t callback)
 {
     sendCplt_cb = callback;
 }
 
+/**
+ * @brief Abort current transmission and reset the handle's state.
+ * 
+ * @param hi2c the handle
+ */
 void i2c_send_abort(I2C_Send_t *hi2c)
 {
     LL_I2C_DisableDMAReq_TX(hi2c->Instance);
@@ -23,6 +33,7 @@ void i2c_send_abort(I2C_Send_t *hi2c)
     LL_I2C_GenerateStopCondition(hi2c->Instance);
     hi2c->State = User_I2C_State_IDLE;
 }
+
 
 static void i2c_send_dma_start(I2C_Send_t *hi2c)
 {
@@ -90,6 +101,19 @@ bool i2c_send_start(I2C_Send_t *hi2c, u8 slvAddr, u8 *dat, u16 len)
 }
 
 
+/**
+ * @brief Start i2c memory write transmission, which will send a memaddr before data transfer.
+ * 
+ * @param hi2c the handle
+ * @param slvAddr the slave address, whose LSB should be 0 (write condition)
+ * @param memAddr the memory address to be written to, which is sent after slave address and before data transfer
+ * @param dat the data array to be transferred
+ * @param len the length to transfer
+ * @return true if the transmission process is successfully started,
+ *         which means the start condition is generated and the slave address is sent;
+ * @return false if the i2c is busy and the transmission process cannot be started,
+ *         or the slave address is wrong for its LSB is 1 (read condition)
+ */
 bool i2c_mem_write_start(I2C_Send_t *hi2c, u8 slvAddr, u8 memAddr, u8 *dat, u16 len)
 {
     if (hi2c->State != User_I2C_State_IDLE) return false;

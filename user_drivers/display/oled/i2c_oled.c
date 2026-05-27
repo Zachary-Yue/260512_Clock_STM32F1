@@ -2,6 +2,8 @@
 #include "i2c_oled.h"
 #include "sys_err.h"
 
+#define TAG "i2c_oled"
+
 #define OLED_CONTROLBYTE_CMD_STREAM     (0x00) // 多字节命令 0000 0000b
 #define OLED_CONTROLBYTE_CMD_SINGLE     (0x80) // 单字节命令 1000 0000b
 #define OLED_CONTROLBYTE_DATA           (0x40) // 传输数据   0100 0000b
@@ -122,6 +124,7 @@ bool i2c_oled_refresh(i2c_oled_t *oled)
     retry = 0;
     if (oled->i2c_send_reset) {
         oled->i2c_send_reset();
+        SLOGI(TAG, "I2C bus reset");
     }
     return false;
 }
