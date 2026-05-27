@@ -610,7 +610,13 @@ static void s_message_parse_normal(const char *dat, u16 len)
         }
         else if (begins_with_str(dat + 3, " ri")) {
             if (len == lenof_cstr("scr ri")) {
-                parse_logi("Current reinit interval is %u hours.", display_get_reinit_interval_h());
+                u32 interv = display_get_reinit_interval_h();
+                if (interv == 0) {
+                    parse_logi("Automatic reinitialization is turned off.");
+                }
+                else {
+                    parse_logi("Current reinit interval is %u hours.", interv);
+                }
             }
             else {
                 u32 interval;

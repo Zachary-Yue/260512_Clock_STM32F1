@@ -31,6 +31,11 @@ static bool i2c_mem_write_dma(u8 slvaddr, u8 memaddr, u8 *data, u16 len)
     return i2c_mem_write_start(&hi2c1, slvaddr, memaddr, data, len);
 }
 
+static void i2c_send_reset(void)
+{
+    i2c_send_abort(&hi2c1);
+}
+
 
 void display_subtrate(void)
 {
@@ -85,7 +90,8 @@ void display_init(void)
         .display_buf_size = sizeof(disp_buf),
         .width = 128,
         .height = 64,
-        .i2c_addr = 0x78
+        .i2c_addr = 0x78,
+        .i2c_send_reset = i2c_send_reset
     };
     if (i2c_oled_init(&oled, &cfg)) {
         LOGI(TAG, "Display initialized successfully");
@@ -104,7 +110,7 @@ void display_scr_on_off(bool on)
     }
 }
 
-static u32 display_reinit_interval_s = 60*60*24; // 24 h
+static u32 display_reinit_interval_s = 0; // Off by default
 static u32 display_reinit_cnt = 0;
 
 /* 定时重启显示屏，因为 I2C 容易死机 */

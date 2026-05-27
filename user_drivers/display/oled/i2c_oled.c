@@ -11,6 +11,8 @@
 
 #define OLED_DISPGRAPH_SIZE             ((u16)(8*128))
 
+#define OLED_I2C_RETRY_MAX              (9)
+
 static const u8 init[] = {
     OLED_DISPLAY_OFF, // 关闭显示
 
@@ -105,10 +107,23 @@ void i2c_oled_clear(i2c_oled_t *oled)
  */
 bool i2c_oled_refresh(i2c_oled_t *oled)
 {
+    static u8 retry = 0;
     CHECK_FALSE_RET(oled, false);
     CHECK_FALSE_RET(oled->is_init == true, false);
     CHECK_FALSE_RET(oled->display_buf && oled->i2c_mem_write_dma, false);
-    return oled->i2c_mem_write_dma(oled->i2c_addr, OLED_CONTROLBYTE_DATA, oled->display_buf, oled->display_buf_size);
+    if (oled->i2c_mem_write_dma(oled->i2c_addr, OLED_CONTROLBYTE_DATA, oled->display_buf, oled->display_buf_size)) {
+        retry = 0;
+        return true;
+    }
+    if (retry < OLED_I2C_RETRY_MAX) {
+        retry++;
+        return false;
+    }
+    retry = 0;
+    if (oled->i2c_send_reset) {
+        oled->i2c_send_reset();
+    }
+    return false;
 }
 
 /**
