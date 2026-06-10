@@ -38,7 +38,15 @@ static const u8 main_m4[] =
 };
 // 装饰音（第2、3拍，刮奏 G7~C8~HE7, C8~HE7~HH5.
 
-/* 重复 1 2 1 */
+/* 重复 1 2 */
+
+static const u8 main_m1_var[] =
+{
+    E6, P1, C6, P1_2, REST, P1_2, G6, P1_2 + P1_4, F6, P1_4,
+    E6, P1_2 + P1_4, F6, P1_4,
+
+    E6, P2, D6, P2,
+};
 
 static const u8 main_m8[] =
 {
@@ -78,7 +86,7 @@ static const melody_t main_melodies[] =
     {main_m4, sizeof(main_m4) / sizeof(u8)},
 
     {main_m1_2, sizeof(main_m1_2) / sizeof(u8)},
-    {main_m1, sizeof(main_m1) / sizeof(u8)},
+    {main_m1_var, sizeof(main_m1_var) / sizeof(u8)},
     {main_m8, sizeof(main_m8) / sizeof(u8)},
 
     {main_m9_12, sizeof(main_m9_12) / sizeof(u8)},

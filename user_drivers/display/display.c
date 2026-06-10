@@ -77,8 +77,8 @@ void display_init(void)
 
     i2c_send_abort(&hi2c1);
     i2c1_reset();
-    OLED_POWER_OFF();
-    LL_mDelay(10);
+    // OLED_POWER_OFF();
+    // LL_mDelay(10);
     OLED_POWER_ON();
     LL_mDelay(10);
 
