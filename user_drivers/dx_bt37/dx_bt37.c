@@ -17,6 +17,7 @@ static const uint32_t dx_bt37_baud_rates[DX_BT37_BAUD_MAX] = {
 #define DX_BT37_WAIT_MAX 1000
 
 static bool dx_bt37_test_com(dx_bt37_t *bt37);
+static bool dx_bt37_lp(dx_bt37_t *bt37);
 
 /**
  * @brief DX_BT37 初始化，自动波特率检测。可以用来 reinit。
@@ -25,25 +26,28 @@ static bool dx_bt37_test_com(dx_bt37_t *bt37);
  *   然后通过 UART 发送出去。tx_buf 的大小决定了每次能发送的最大数据量，如果 tx_buf 太小可能会导致发送效率低下，
  *   因为需要频繁地从 tx_fifo 中读取数据并发送。建议 tx_buf_size 至少为 64 字节，以适应大多数应用场景。
  * 
+ * @note 
+ * 
  * @param bt37   BT37 句柄
  * @param config 初始化配置，用户需要配置每一个字段。
  */
 bool dx_bt37_init(dx_bt37_t *bt37, dx_bt37_config_t *config)
 {
     CHECK_FALSE_RET(bt37 && config, false);
-    CHECK_FALSE_RET(config->uart_send && config->tx_buf && config->tx_buf_size &&
-        config->tx_fifo_buf && config->tx_fifo_buf_size, false);
+    CHECK_FALSE_RET(
+        config->send_attr.uart_send && config->send_attr.tx_buf && config->send_attr.tx_buf_size &&
+        config->send_attr.tx_fifo_buf && config->send_attr.tx_fifo_buf_size && config->recv_attr.uart_recv, false);
 
     LOGI(TAG, "Starting initialize DX_BT37...");
 
     // Set default values and copy configuration
     memset(bt37, 0, sizeof(dx_bt37_t));
-    bt37->uart_send = config->uart_send;
-    bt37->uart_recv = config->uart_recv;
+    bt37->uart_send = config->send_attr.uart_send;
+    bt37->uart_recv = config->recv_attr.uart_recv;
     bt37->baud = DX_BT37_BAUD_9600;
-    bt37->tx_buf = config->tx_buf;
-    bt37->tx_buf_size = config->tx_buf_size;
-    user_fifo_init(&bt37->tx_fifo, config->tx_fifo_buf, config->tx_fifo_buf_size);
+    bt37->tx_buf = config->send_attr.tx_buf;
+    bt37->tx_buf_size = config->send_attr.tx_buf_size;
+    user_fifo_init(&bt37->tx_fifo, config->send_attr.tx_fifo_buf, config->send_attr.tx_fifo_buf_size);
 
     LOGI(TAG, "Starting auto baud rate detection...");
     uart_abort(bt37->uart_send, bt37->uart_recv); // 确保 UART 处于空闲状态
@@ -69,14 +73,21 @@ bool dx_bt37_init(dx_bt37_t *bt37, dx_bt37_config_t *config)
     CHECK_FALSE_RET_LOG(bt37->is_init, false, TAG,
         "Failed to detect baud rate. Init failed.");
 
-    bt37->rx_enabled = config->uart_recv && config->rx_buf && config->rx_buf_size &&
-        config->rx_proc_buf && config->rx_proc_buf_size;
+    if (dx_bt37_lp(bt37)) {
+        LOGI(TAG, "Open BT37 LP mode successfully.");
+    }
+    else {
+        LOGW(TAG, "Failed to open BT37 LP mode.");
+    }
+
+    bt37->rx_enabled = config->recv_attr.rx_buf && config->recv_attr.rx_buf_size &&
+        config->recv_attr.rx_proc_buf && config->recv_attr.rx_proc_buf_size;
     if (bt37->rx_enabled) {
-        bt37->rx_buf = config->rx_buf;
-        bt37->rx_buf_size = config->rx_buf_size;
-        bt37->rx_proc_buf = config->rx_proc_buf;
-        bt37->rx_proc_buf_size = config->rx_proc_buf_size;
-        bt37->dx_bt37_rx_data_proc = config->dx_bt37_rx_data_proc;
+        bt37->rx_buf = config->recv_attr.rx_buf;
+        bt37->rx_buf_size = config->recv_attr.rx_buf_size;
+        bt37->rx_proc_buf = config->recv_attr.rx_proc_buf;
+        bt37->rx_proc_buf_size = config->recv_attr.rx_proc_buf_size;
+        bt37->dx_bt37_rx_data_proc = config->recv_attr.dx_bt37_rx_data_proc;
         uart_receive_start(bt37->uart_recv, bt37->rx_buf, true, bt37->rx_buf_size);
     }
 
@@ -242,10 +253,59 @@ void dx_bt37_recv(dx_bt37_t *bt37)
     bt37->dx_bt37_rx_data_proc(bt37, bt37->rx_proc_buf, bt37->rx_received_len);
 }
 
-#define DX_BT37_TEST_STRING "AT\r\n"
-#define DX_BT37_TEST_RECV_STRING "OK\r\n"
-#define DX_BT37_TEST_RECV_BUF_SIZE 16
-#define DX_BT37_DISC_CMD "AT+DISC\r\n"
+/**
+ * @brief 测试 BT37 的通信测试
+ * 
+ * @param bt37 BT37 句柄
+ * @param test_string 要发送的字符串
+ * @param recv_buf 接收回应的缓冲区，给 NULL 表示不接收回应
+ * @param test_recv_buf_size 接收缓冲区的大小，给 0 表示不接收回应
+ * @return true 字符串成功发送给 BT37，并且在启用接收时成功接收到回应
+ * @return false 发送或者接收失败
+ * 
+ * @note 虽然可以不使能接收，但是如果会有消息从模块发来的话，还是建议接收一下，避免残余数据干扰后面的接收。
+ */
+static bool dx_bt37_test(
+    dx_bt37_t *bt37,
+    const char *test_string,
+    char *recv_buf,
+    u16 test_recv_buf_size)
+{
+    CHECK_FALSE_RET(bt37 && test_string, false);
+    CHECK_FALSE_RET(bt37->uart_send, false);
+    bool en_recv = bt37->uart_recv && recv_buf && test_recv_buf_size > 0;
+
+    if (en_recv) {
+        memset(recv_buf, 0, test_recv_buf_size);
+        uart_abort(bt37->uart_send, bt37->uart_recv); // 确保 UART 处于空闲状态
+    }
+
+    CHECK_FALSE_RET(uart_send_start(bt37->uart_send,
+        (u8*)test_string, strlen(test_string)), false);
+    if (uart_send_wait(bt37->uart_send, 30) == false) {
+        uart_abort(bt37->uart_send, bt37->uart_recv);
+        return false;
+    }
+
+    if (en_recv) {
+        CHECK_FALSE_RET(uart_receive_start(bt37->uart_recv,
+            (u8*)recv_buf, false, test_recv_buf_size), false);
+        if (uart_recv_wait(bt37->uart_recv, 30) == false) {
+            uart_abort(bt37->uart_send, bt37->uart_recv);
+            recv_buf[test_recv_buf_size - 1] = '\0';
+            return false;
+        }
+        recv_buf[test_recv_buf_size - 1] = '\0';
+    }
+    return true;
+}
+
+#define TEST_COM_STRING "AT\r\n"
+#define TEST_COM_RECV_STRING "OK\r\n"
+#define TEST_COM_RECV_BUF_SIZE 16
+#define LP_CMD "AT+PWRM0\r\n"
+#define LP_RECV_BUF_SIZE 32
+#define DISC_CMD "AT+DISC\r\n"
 
 /**
  * @brief 给 BT37 发送 AT\r\n，通过判断回复是否为 OK\r\n 来判断模块收发是否正常。
@@ -255,29 +315,27 @@ void dx_bt37_recv(dx_bt37_t *bt37)
  */
 static bool dx_bt37_test_com(dx_bt37_t *bt37)
 {
-    if (bt37 == NULL) return false;
-    u8 test_recv_string_buf[DX_BT37_TEST_RECV_BUF_SIZE];
-
-    memset(test_recv_string_buf, 0, sizeof(test_recv_string_buf));
-
-    uart_abort(bt37->uart_send, bt37->uart_recv);
-
-    CHECK_FALSE_RET(uart_send_start(bt37->uart_send,
-        (u8*)DX_BT37_TEST_STRING, lenof_cstr(DX_BT37_TEST_STRING)), false);
-    if (uart_send_wait(bt37->uart_send, 30) == false) {
-        uart_abort(bt37->uart_send, bt37->uart_recv);
-        return false;
+    char test_recv_string_buf[TEST_COM_RECV_BUF_SIZE];
+    if (dx_bt37_test(bt37, TEST_COM_STRING, test_recv_string_buf, TEST_COM_RECV_BUF_SIZE)) {
+        if (begins_with_str((char*)test_recv_string_buf, TEST_COM_RECV_STRING)) {
+            return true;
+        }
     }
-
-    CHECK_FALSE_RET(uart_receive_start(bt37->uart_recv,
-        test_recv_string_buf, false, DX_BT37_TEST_RECV_BUF_SIZE), false);
-    if (uart_recv_wait(bt37->uart_recv, 30) == false) {
-        uart_abort(bt37->uart_send, bt37->uart_recv);
-        return false;
-    }
-    return (begins_with_str((char*)test_recv_string_buf, DX_BT37_TEST_RECV_STRING) ? true : false);
+    return false;
 }
 
+/**
+ * @brief 启动 BT37 进入低功耗模式，发送 AT+PWRM0 命令。
+ * 
+ * @param bt37 BT37 句柄
+ * @return true 成功发送命令
+ * @return false 发送失败
+ */
+static bool dx_bt37_lp(dx_bt37_t *bt37)
+{
+    char lp_recv_buf[LP_RECV_BUF_SIZE];
+    return dx_bt37_test(bt37, LP_CMD, lp_recv_buf, LP_RECV_BUF_SIZE);
+}
 
 /**
  * @brief 断开 BT37 连接，发送 AT+DISC 命令。这个函数会阻塞等待发送完成，慎用。
@@ -290,6 +348,6 @@ void dx_bt37_disconnect(dx_bt37_t *bt37)
     CHECK_FALSE_RET_VOID(bt37->is_init);
     dx_bt37_send_all(bt37); // 确保发送完成
     LL_mDelay(20); // 主动分包，避免 AT+DISC 命令和之前的命令一起发送导致模块不响应
-    dx_bt37_printf(bt37, DX_BT37_DISC_CMD);
+    dx_bt37_printf(bt37, DISC_CMD);
     dx_bt37_send_all(bt37); // 确保发送完成
 }

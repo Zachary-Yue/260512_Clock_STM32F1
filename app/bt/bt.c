@@ -24,17 +24,17 @@ void bt_init(void)
 {
     LOGI(TAG, "Initializing BLE module...");
     dx_bt37_config_t cfg = {
-        .uart_send = &huart3_send,
-        .uart_recv = &huart3_recv,
-        .tx_fifo_buf = bt37_txfifo_buf,
-        .tx_fifo_buf_size = BT37_TX_FIFO_SIZE,
-        .tx_buf = bt37_tx_buf,
-        .tx_buf_size = BT37_TX_BUF_SIZE,
-        .rx_buf = bt37_rx_buf,
-        .rx_buf_size = BT37_RX_BUF_SIZE,
-        .rx_proc_buf = bt37_rx_proc_buf,
-        .rx_proc_buf_size = BT37_RX_PROC_BUF_SIZE,
-        .dx_bt37_rx_data_proc = dx_bt37_rx_data_proc
+        .send_attr.uart_send = &huart3_send,
+        .recv_attr.uart_recv = &huart3_recv,
+        .send_attr.tx_fifo_buf = bt37_txfifo_buf,
+        .send_attr.tx_fifo_buf_size = BT37_TX_FIFO_SIZE,
+        .send_attr.tx_buf = bt37_tx_buf,
+        .send_attr.tx_buf_size = BT37_TX_BUF_SIZE,
+        .recv_attr.rx_buf = bt37_rx_buf,
+        .recv_attr.rx_buf_size = BT37_RX_BUF_SIZE,
+        .recv_attr.rx_proc_buf = bt37_rx_proc_buf,
+        .recv_attr.rx_proc_buf_size = BT37_RX_PROC_BUF_SIZE,
+        .recv_attr.dx_bt37_rx_data_proc = dx_bt37_rx_data_proc
     };
     dx_bt37_init(&bt37, &cfg);
     LOGI(TAG, "BLE module initialization finished.");

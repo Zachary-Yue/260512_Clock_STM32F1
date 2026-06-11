@@ -39,17 +39,24 @@ typedef struct dx_bt37_t {
 } dx_bt37_t;
 
 typedef struct {
-    void (*dx_bt37_rx_data_proc)(dx_bt37_t *bt37, u8 *data, u16 len); // 数据处理回调函数，给 NULL 表示不处理接收到的数据
-    UART_Send_t *uart_send;         // 给一个经过初始化的串口发送句柄
-    UART_Recv_t *uart_recv;         // 给一个经过初始化的串口接收句柄
-    u8 *tx_fifo_buf;                // 发送 FIFO 的缓冲区
-    u8 *tx_buf;                     // 发送数据的缓冲区
-    u8 *rx_buf;                     // 接收数据的缓冲区
-    u8 *rx_proc_buf;                // 数据处理缓冲区
-    u16 tx_buf_size;                // 发送数据的缓冲区大小
-    u16 tx_fifo_buf_size;           // 发送 FIFO 的缓冲区大小
-    u16 rx_buf_size;                // 接收数据的缓冲区大小
-    u16 rx_proc_buf_size;           // 数据处理的缓冲区大小
+    struct {
+        // 给一个经过初始化的串口发送句柄（不可给 NULL，初始化一定会用到发送功能）
+        UART_Send_t *uart_send;
+        u8 *tx_buf;                     // 发送数据的缓冲区
+        u8 *tx_fifo_buf;                // 发送 FIFO 的缓冲区
+        u16 tx_buf_size;                // 发送数据的缓冲区大小
+        u16 tx_fifo_buf_size;           // 发送 FIFO 的缓冲区大小
+    } send_attr;
+    struct {
+         // 数据处理回调函数，给 NULL 表示不处理接收到的数据
+        void (*dx_bt37_rx_data_proc)(dx_bt37_t *bt37, u8 *data, u16 len);
+        // 给一个经过初始化的串口接收句柄（不可给 NULL，初始化一定会用到接收功能）
+        UART_Recv_t *uart_recv;
+        u8 *rx_buf;                     // 接收数据的缓冲区，给 NULL 表示不接收数据
+        u8 *rx_proc_buf;                // 数据处理缓冲区，给 NULL 表示不接收数据
+        u16 rx_buf_size;                // 接收数据的缓冲区大小，给 0 不接收数据
+        u16 rx_proc_buf_size;           // 数据处理的缓冲区大小，给 0 不接收数据
+    } recv_attr;
 } dx_bt37_config_t;
 
 
