@@ -8,6 +8,7 @@
 #include "display.h"
 #include "app_music.h"
 #include "app_clock.h"
+#include "app_battery.h"
 
 // #define TAG "PARSE"
 
@@ -676,6 +677,18 @@ static void s_message_parse_normal(const char *dat, u16 len)
         parse_logi( "\t(7) Watch: watch <...>\r\n"
                     "\t(8) Screen: (a) scr reinit (b) scr <on/off> (c) scr ri <interval_h>\r\n"
                     "Type them with a space to see their instructions.");
+    }
+
+    /* Battery */
+    else if (begins_with_str(dat, "bat")) {
+        u8 level = app_battery_get_level();
+        u8 tmp = level / 5;
+        parse_printf("Battery level [");
+        for (u8 i = 0; i < 20; i++) {
+            if (i < tmp) parse_printf("#");
+            else parse_printf(" ");
+        }
+        parse_printf("] %d%%\r\n", level);
     }
 
     /* Static Logs */

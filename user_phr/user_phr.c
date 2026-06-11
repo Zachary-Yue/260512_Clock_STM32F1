@@ -2,6 +2,7 @@
 #include "user_phr.h"
 #include "sys_err.h"
 #include "bt.h"
+#include "app_battery.h"
 
 I2C_Send_t hi2c1;
 UART_Send_t huart1_send;
@@ -19,6 +20,7 @@ void user_phr_init(void)
     uart_recv_init(&huart1_recv, USART1, DMA1, LL_DMA_CHANNEL_5);
     uart_recv_init(&huart3_recv, USART3, DMA1, LL_DMA_CHANNEL_3);
     i2c_send_init(&hi2c1, I2C1, DMA1, LL_DMA_CHANNEL_6);
+    app_battery_init();
 }
 
 static void user_uart_recv_cplt(UART_Recv_t *recv)

@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "adc.h"
 #include "dma.h"
 #include "i2c.h"
 #include "rtc.h"
@@ -111,6 +112,7 @@ int main(void)
   MX_TIM4_Init();
   MX_TIM1_Init();
   MX_RTC_Init();
+  MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
 
   sys_init();
@@ -174,6 +176,7 @@ void SystemClock_Config(void)
   }
   LL_Init1msTick(72000000);
   LL_SetSystemCoreClock(72000000);
+  LL_RCC_SetADCClockSource(LL_RCC_ADC_CLKSRC_PCLK2_DIV_6);
 }
 
 /* USER CODE BEGIN 4 */

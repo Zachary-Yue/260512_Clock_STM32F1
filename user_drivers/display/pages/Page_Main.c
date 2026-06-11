@@ -11,6 +11,7 @@
 #include "Page_Main.h"
 #include "app_clock.h"
 #include "app_music.h"
+#include "app_battery.h"
 
 u8 Time_FONT = FONT_NUM3216_1;
 
@@ -46,4 +47,6 @@ void Page_Main_Task(void)
     else oled_show_string(OLED_ROW(1), OLED_COL(8), "  ");
     if (Alarm_IconExistCnt) oled_show_icon16(OLED_ROW(1), OLED_COL(10), Icon16_ALARM_CLOCK);
     else oled_show_string(OLED_ROW(1), OLED_COL(10), "  ");
+    if (app_battery_is_low_power()) oled_show_icon16(OLED_ROW(1), OLED_COL(15), Icon16_LOW_BATTERY);
+    else oled_show_string(OLED_ROW(1), OLED_COL(15), "  ");
 }

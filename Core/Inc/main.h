@@ -28,6 +28,7 @@ extern "C" {
 
 /* Includes ------------------------------------------------------------------*/
 
+#include "stm32f1xx_ll_adc.h"
 #include "stm32f1xx_ll_dma.h"
 #include "stm32f1xx_ll_i2c.h"
 #include "stm32f1xx_ll_rcc.h"
@@ -79,6 +80,8 @@ void Error_Handler(void);
 #define LED0_GPIO_Port GPIOC
 #define BUZZ1_Pin LL_GPIO_PIN_0
 #define BUZZ1_GPIO_Port GPIOA
+#define BATTERY_Pin LL_GPIO_PIN_5
+#define BATTERY_GPIO_Port GPIOA
 #define BUZZ2_Pin LL_GPIO_PIN_6
 #define BUZZ2_GPIO_Port GPIOA
 #define OLED_POWER_Pin LL_GPIO_PIN_7

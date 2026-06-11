@@ -4,6 +4,7 @@
 #include "system.h"
 #include "light.h"
 #include "display.h"
+#include "app_battery.h"
 
 typedef struct
 {
@@ -14,7 +15,7 @@ typedef struct
 
 
 // 任务总数。每添加一个任务，记得修改这个宏定义
-#define TASK_TOTAL      3
+#define TASK_TOTAL      5
 
 // 任务列表
 Task_t Task[TASK_TOTAL] =
@@ -23,6 +24,8 @@ Task_t Task[TASK_TOTAL] =
     { 1000, 0, light_task },
     { 1000, 0, display_reinit_timer },
     { 100, 0, display_task },
+    { 5000, 0, app_battery_task },
+    { 10000, 0, app_battery_report_lp_task },
 };
 
 
