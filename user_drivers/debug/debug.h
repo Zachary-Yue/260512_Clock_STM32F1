@@ -49,7 +49,7 @@ void debug_init(void);
     #define LOGI(tag, fmt, ...) DEBUGM_LOGI(&hdebug, tag, fmt, ##__VA_ARGS__)
     #define LOGW(tag, fmt, ...) DEBUGM_LOGW(&hdebug, tag, fmt, ##__VA_ARGS__)
     #define LOGE(tag, fmt, ...) DEBUGM_LOGE(&hdebug, tag, fmt, ##__VA_ARGS__)
-    #if 1
+    #ifdef DEBUG
         #define LOGD(tag, fmt, ...) DEBUGM_LOGD(&hdebug, tag, fmt, ##__VA_ARGS__)
     #else
         #define LOGD(...)

@@ -73,4 +73,6 @@ void battery_init(battery_handle_t *handle, const battery_config_t *config)
     handle->past_idx = 0;
     memset(handle->past, 100, sizeof(handle->past));
     LL_ADC_Enable(handle->adc);
+    LL_ADC_StartCalibration(handle->adc);
+    while (LL_ADC_IsCalibrationOnGoing(handle->adc));
 }

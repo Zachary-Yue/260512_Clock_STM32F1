@@ -647,8 +647,8 @@ static void s_message_parse_normal(const char *dat, u16 len)
         }
     }
 
-    #if 0
     /* Bluetooth */
+    #if 0
     else if (begins_with_str(dat, "bt-baud")) {
         u32 baud = atoi((char*)dat + lenof_cstr("bt-baud") + 1);
         bt_change_baud(baud);
@@ -732,6 +732,7 @@ static void s_message_parse_normal(const char *dat, u16 len)
     }
 
     // parse_logi("Recv: %.*s, len = %hd", len, dat, len);
+    parse_printf("Clock> ");
 }
 
 #define SLOG_ONCE_READ_LEN 1024

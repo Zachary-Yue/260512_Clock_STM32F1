@@ -44,11 +44,12 @@ bool dx_bt37_init(dx_bt37_t *bt37, dx_bt37_config_t *config)
     memset(bt37, 0, sizeof(dx_bt37_t));
     bt37->uart_send = config->send_attr.uart_send;
     bt37->uart_recv = config->recv_attr.uart_recv;
-    bt37->baud = DX_BT37_BAUD_9600;
+    bt37->baud = DX_BT37_BAUD_115200;
     bt37->tx_buf = config->send_attr.tx_buf;
     bt37->tx_buf_size = config->send_attr.tx_buf_size;
     user_fifo_init(&bt37->tx_fifo, config->send_attr.tx_fifo_buf, config->send_attr.tx_fifo_buf_size);
 
+    #if 0
     LOGI(TAG, "Starting auto baud rate detection...");
     uart_abort(bt37->uart_send, bt37->uart_recv); // 确保 UART 处于空闲状态
 
@@ -69,9 +70,13 @@ bool dx_bt37_init(dx_bt37_t *bt37, dx_bt37_config_t *config)
     }
 
     bt37->is_init = (baud_index < DX_BT37_BAUD_MAX);
+    #else
+    uart_change_baud(bt37->uart_send->Instance, dx_bt37_baud_rates[DX_BT37_BAUD_115200]);
+    bt37->is_init = true;
+    #endif
 
-    CHECK_FALSE_RET_LOG(bt37->is_init, false, TAG,
-        "Failed to detect baud rate. Init failed.");
+    // CHECK_FALSE_RET_LOG(bt37->is_init, false, TAG,
+    //     "Failed to detect baud rate. Init failed.");
 
     if (dx_bt37_lp(bt37)) {
         LOGI(TAG, "Open BT37 LP mode successfully.");
@@ -278,6 +283,8 @@ static bool dx_bt37_test(
     if (en_recv) {
         memset(recv_buf, 0, test_recv_buf_size);
         uart_abort(bt37->uart_send, bt37->uart_recv); // 确保 UART 处于空闲状态
+        // uart_receive_start(bt37->uart_recv, (u8*)recv_buf, false, test_recv_buf_size);
+        // uart_recv_wait(bt37->uart_recv, 5); // 等待可能的残余数据接收完成，避免干扰后续通信
     }
 
     CHECK_FALSE_RET(uart_send_start(bt37->uart_send,
@@ -302,9 +309,12 @@ static bool dx_bt37_test(
 
 #define TEST_COM_STRING "AT\r\n"
 #define TEST_COM_RECV_STRING "OK\r\n"
-#define TEST_COM_RECV_BUF_SIZE 16
 #define LP_CMD "AT+PWRM0\r\n"
-#define LP_RECV_BUF_SIZE 32
+#define LP_RECV_STRING "+PWRM=0"
+#define NM_CMD "AT+PWRM1\r\n"
+#define NM_RECV_STRING_1 "+PWRM=1"
+#define NM_RECV_STRING_2 "OK\r\n"
+#define TEST_RECV_BUF_SIZE 20
 #define DISC_CMD "AT+DISC\r\n"
 
 /**
@@ -315,8 +325,14 @@ static bool dx_bt37_test(
  */
 static bool dx_bt37_test_com(dx_bt37_t *bt37)
 {
-    char test_recv_string_buf[TEST_COM_RECV_BUF_SIZE];
-    if (dx_bt37_test(bt37, TEST_COM_STRING, test_recv_string_buf, TEST_COM_RECV_BUF_SIZE)) {
+    char test_recv_string_buf[TEST_RECV_BUF_SIZE];
+    // if (dx_bt37_test(bt37, NM_CMD, test_recv_string_buf, TEST_RECV_BUF_SIZE)) {
+    //     if (begins_with_str((char*)test_recv_string_buf, NM_RECV_STRING_1) ||
+    //         begins_with_str((char*)test_recv_string_buf, NM_RECV_STRING_2)) {
+    //         return true;
+    //     }
+    // }
+    if (dx_bt37_test(bt37, TEST_COM_STRING, test_recv_string_buf, TEST_RECV_BUF_SIZE)) {
         if (begins_with_str((char*)test_recv_string_buf, TEST_COM_RECV_STRING)) {
             return true;
         }
@@ -325,7 +341,7 @@ static bool dx_bt37_test_com(dx_bt37_t *bt37)
 }
 
 /**
- * @brief 启动 BT37 进入低功耗模式，发送 AT+PWRM0 命令。
+ * @brief 使 BT37 进入低功耗模式，发送 AT+PWRM0 命令。
  * 
  * @param bt37 BT37 句柄
  * @return true 成功发送命令
@@ -333,8 +349,8 @@ static bool dx_bt37_test_com(dx_bt37_t *bt37)
  */
 static bool dx_bt37_lp(dx_bt37_t *bt37)
 {
-    char lp_recv_buf[LP_RECV_BUF_SIZE];
-    return dx_bt37_test(bt37, LP_CMD, lp_recv_buf, LP_RECV_BUF_SIZE);
+    char lp_recv_buf[TEST_RECV_BUF_SIZE];
+    return dx_bt37_test(bt37, LP_CMD, lp_recv_buf, TEST_RECV_BUF_SIZE);
 }
 
 /**
