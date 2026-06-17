@@ -3,6 +3,7 @@
 
 #include "Star.h"
 
+/* 《芒种》- 音阙诗听 */
 
 static const u8 M1[] = {
     C5, P1,       REST, P1_2,   C5, P1_4,    C5, P1_4,

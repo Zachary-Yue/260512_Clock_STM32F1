@@ -1,6 +1,8 @@
 
 #include "music_06.h"
 
+/* 不知名电子琴示范曲 */
+
 /*------------------------ Main Melodies ------------------------*/
 
 static const u8 main_m1[] =

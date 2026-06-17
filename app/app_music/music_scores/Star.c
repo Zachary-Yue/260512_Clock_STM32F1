@@ -1,6 +1,8 @@
 
 #include "Star.h"
 
+/* Twinkle Star - 传统儿歌 */
+
 static const u8 m1[] = {
     C5, P1, C5, P1, G5, P1, G5, P1, A5, P1, A5, P1, G5, P2,
     F5, P1, F5, P1, E5, P1, E5, P1, D5, P1, D5, P1, C5, P2,

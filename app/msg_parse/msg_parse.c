@@ -671,17 +671,17 @@ static void s_message_parse_normal(const char *dat, u16 len)
         parse_send_all();
         parse_logi( "Hello! This is your lovely clock. Here are the commands:\r\n"
                     "\t(1) Music:\r\n\t\t(a) play [<num>] (b) stop (c) pause\r\n"
-                    "\t(2) Pitch: pitch [<pitches>]\r\n");
+                    "\t(2) Pages: page <name>\r\n");
         parse_send_all();
         LL_mDelay(20);
-        parse_logi( "\t(3) Pages: page <name>\r\n"
-                    "\t(4) Time:\r\n\t\t(a) font <num> (b) set <...> (c) time (d) date\r\n"
-                    "\t(5) Alarm: alarm <...>\r\n"
-                    "\t(6) Timer: timer <...>\r\n");
+        parse_logi( "\t(3) Time:\r\n\t\t(a) font <num> (b) set <...> (c) time (d) date\r\n"
+                    "\t(4) Alarm: alarm <...>\r\n"
+                    "\t(5) Timer: timer <...>\r\n"
+                    "\t(6) Watch: watch <...>\r\n");
         parse_send_all();
         LL_mDelay(20);
-        parse_logi( "\t(7) Watch: watch <...>\r\n"
-                    "\t(8) Screen: (a) scr reinit (b) scr <on/off> (c) scr ri <interval_h>\r\n"
+        parse_logi( "\t(7) Screen: (a) scr reinit (b) scr <on/off> (c) scr ri <interval_h>\r\n"
+                    "\t(8) Battery: bat\r\n"
                     "Type them with a space to see their instructions.");
     }
 

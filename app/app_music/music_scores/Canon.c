@@ -10,6 +10,8 @@
  */
 #include "Canon.h"
 
+/* Canon in D */
+
 /*---------------------------- Main ----------------------------*/
 
 static const u8 main_1[] = {

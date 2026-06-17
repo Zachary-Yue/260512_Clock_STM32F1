@@ -1,6 +1,8 @@
 
 #include "ING.h"
 
+/* In The Night Garden Open Theme */
+
 /*----------------- Main ------------------*/
 
 static const u8 main_m1[] =

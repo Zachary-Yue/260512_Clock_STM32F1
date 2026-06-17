@@ -1,6 +1,8 @@
 
 #include "Rainbow.h"
 
+/* 《Rainbow》- 刘浩存、王安宇 */
+
 /*--------------- Main Melody - Field 6 -----------*/
 
 static const u8 main_m1[] =

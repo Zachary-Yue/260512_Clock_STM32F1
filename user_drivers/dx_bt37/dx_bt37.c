@@ -18,6 +18,10 @@ static const uint32_t dx_bt37_baud_rates[DX_BT37_BAUD_MAX] = {
 
 static bool dx_bt37_test_com(dx_bt37_t *bt37);
 static bool dx_bt37_lp(dx_bt37_t *bt37);
+static bool dx_bt37_set_name(dx_bt37_t *bt37);
+
+// 临时用宏定义先分个类，后续会集成到初始化 config 里。
+#define PRIV_BAUD_AUTO_DETECT 0
 
 /**
  * @brief DX_BT37 初始化，自动波特率检测。可以用来 reinit。
@@ -44,39 +48,39 @@ bool dx_bt37_init(dx_bt37_t *bt37, dx_bt37_config_t *config)
     memset(bt37, 0, sizeof(dx_bt37_t));
     bt37->uart_send = config->send_attr.uart_send;
     bt37->uart_recv = config->recv_attr.uart_recv;
-    bt37->baud = DX_BT37_BAUD_115200;
+    bt37->baud = DX_BT37_BAUD_115200; // 默认波特率，后续可能会被自动检测覆盖
     bt37->tx_buf = config->send_attr.tx_buf;
     bt37->tx_buf_size = config->send_attr.tx_buf_size;
     user_fifo_init(&bt37->tx_fifo, config->send_attr.tx_fifo_buf, config->send_attr.tx_fifo_buf_size);
 
-    #if 0
-    LOGI(TAG, "Starting auto baud rate detection...");
-    uart_abort(bt37->uart_send, bt37->uart_recv); // 确保 UART 处于空闲状态
+    #if PRIV_BAUD_AUTO_DETECT
+        LOGI(TAG, "Starting auto baud rate detection...");
+        uart_abort(bt37->uart_send, bt37->uart_recv); // 确保 UART 处于空闲状态
 
-    // auto baud rate detection
-    u8 baud_index = DX_BT37_BAUD_2400;
-    while (baud_index < DX_BT37_BAUD_MAX) {
-        LOGI(TAG, "Testing baud rate: %lu", dx_bt37_baud_rates[baud_index]);
-        uart_change_baud(bt37->uart_send->Instance, dx_bt37_baud_rates[baud_index]);
-        if (dx_bt37_test_com(bt37))
-        {
-            LOGI(TAG, "Baud rate detected: %lu", dx_bt37_baud_rates[baud_index]);
-            bt37->baud = baud_index;
-            bt37->is_init = true;
-            break;
+        // auto baud rate detection
+        u8 baud_index = DX_BT37_BAUD_2400;
+        while (baud_index < DX_BT37_BAUD_MAX) {
+            LOGI(TAG, "Testing baud rate: %lu", dx_bt37_baud_rates[baud_index]);
+            uart_change_baud(bt37->uart_send->Instance, dx_bt37_baud_rates[baud_index]);
+            if (dx_bt37_test_com(bt37))
+            {
+                LOGI(TAG, "Baud rate detected: %lu", dx_bt37_baud_rates[baud_index]);
+                bt37->baud = baud_index;
+                bt37->is_init = true;
+                break;
+            }
+            baud_index++;
+            debug_send();   // 再不发的话 debug 缓冲区要被写满了，无奈之举
         }
-        baud_index++;
-        debug_send();   // 再不发的话 debug 缓冲区要被写满了，无奈之举
-    }
 
-    bt37->is_init = (baud_index < DX_BT37_BAUD_MAX);
+        bt37->is_init = (baud_index < DX_BT37_BAUD_MAX);
     #else
-    uart_change_baud(bt37->uart_send->Instance, dx_bt37_baud_rates[DX_BT37_BAUD_115200]);
-    bt37->is_init = true;
+        uart_change_baud(bt37->uart_send->Instance, dx_bt37_baud_rates[DX_BT37_BAUD_115200]);
+        bt37->is_init = true;
     #endif
 
-    // CHECK_FALSE_RET_LOG(bt37->is_init, false, TAG,
-    //     "Failed to detect baud rate. Init failed.");
+    CHECK_FALSE_RET_LOG(bt37->is_init, false, TAG,
+        "Failed to detect baud rate. Init failed.");
 
     if (dx_bt37_lp(bt37)) {
         LOGI(TAG, "Open BT37 LP mode successfully.");
@@ -84,6 +88,8 @@ bool dx_bt37_init(dx_bt37_t *bt37, dx_bt37_config_t *config)
     else {
         LOGW(TAG, "Failed to open BT37 LP mode.");
     }
+
+    dx_bt37_set_name(bt37); // Set BT37 name to BT_NAME
 
     bt37->rx_enabled = config->recv_attr.rx_buf && config->recv_attr.rx_buf_size &&
         config->recv_attr.rx_proc_buf && config->recv_attr.rx_proc_buf_size;
@@ -307,6 +313,8 @@ static bool dx_bt37_test(
     return true;
 }
 
+#define BT_NAME "YourLovelyClock"
+#define BT_NAME_CMD "AT+NAME" BT_NAME "\r\n"
 #define TEST_COM_STRING "AT\r\n"
 #define TEST_COM_RECV_STRING "OK\r\n"
 #define LP_CMD "AT+PWRM0\r\n"
@@ -314,7 +322,7 @@ static bool dx_bt37_test(
 #define NM_CMD "AT+PWRM1\r\n"
 #define NM_RECV_STRING_1 "+PWRM=1"
 #define NM_RECV_STRING_2 "OK\r\n"
-#define TEST_RECV_BUF_SIZE 20
+#define TEST_RECV_BUF_SIZE 32
 #define DISC_CMD "AT+DISC\r\n"
 
 /**
@@ -351,6 +359,20 @@ static bool dx_bt37_lp(dx_bt37_t *bt37)
 {
     char lp_recv_buf[TEST_RECV_BUF_SIZE];
     return dx_bt37_test(bt37, LP_CMD, lp_recv_buf, TEST_RECV_BUF_SIZE);
+}
+
+/**
+ * @brief 设置 BT37 的蓝牙名称，发送 AT+NAME 命令。
+ * 
+ * @param bt37 BT37 句柄
+ * @param name 要设置的蓝牙名称，建议长度不超过 28 字节，否则可能会被模块截断
+ * @return true 成功发送命令并且接收到回应
+ * @return false 发送命令失败或者接收回应失败
+ */
+static bool dx_bt37_set_name(dx_bt37_t *bt37)
+{
+    char name_recv_buf[TEST_RECV_BUF_SIZE];
+    return dx_bt37_test(bt37, BT_NAME_CMD, name_recv_buf, TEST_RECV_BUF_SIZE);
 }
 
 /**
