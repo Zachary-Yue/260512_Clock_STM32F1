@@ -5,6 +5,8 @@
 #include "pages/pages.h"
 #include "fonts/fonts.h"
 
+#define DISPLAY_EN_REINIT 0
+#define DISPLAY_REINIT_REFUSE_STR "Display reinit function is disabled."
 
 typedef enum page_enum
 {
@@ -29,5 +31,6 @@ void display_scr_on_off(bool on);
 void display_reinit_timer(void);
 u32  display_set_reinit_interval_h(u32 interval_h);
 u32  display_get_reinit_interval_h(void);
-u32 display_get_i2c_error_code(void);
-u32 display_get_i2c_state(void);
+u32  display_get_i2c_error_code(void);
+u32  display_get_i2c_state(void);
+void display_power_off(void);

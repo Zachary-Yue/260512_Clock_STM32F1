@@ -606,36 +606,42 @@ static void s_message_parse_normal(const char *dat, u16 len)
         else if (begins_with_str(dat + 3, " reinit"))
         {
             parse_logi("Start reinit.");
+            display_power_off();
+            LL_mDelay(50);
             display_init();
             parse_logi("Reinit OK.");
         }
         else if (begins_with_str(dat + 3, " ri")) {
-            if (len == lenof_cstr("scr ri")) {
-                u32 interv = display_get_reinit_interval_h();
-                if (interv == 0) {
-                    parse_logi("Automatic reinitialization is turned off.");
-                }
-                else {
-                    parse_logi("Current reinit interval is %u hours.", interv);
-                }
-            }
-            else {
-                u32 interval;
-                if (sscanf(dat + 6, "%lu", &interval) == 1)
-                {
-                    interval = display_set_reinit_interval_h(interval);
-                    if (interval == 0) {
+            #if DISPLAY_EN_REINIT
+                if (len == lenof_cstr("scr ri")) {
+                    u32 interv = display_get_reinit_interval_h();
+                    if (interv == 0) {
                         parse_logi("Automatic reinitialization is turned off.");
                     }
                     else {
-                        parse_logi("Set reinit interval to %u hours.", interval);
+                        parse_logi("Current reinit interval is %u hours.", interv);
                     }
                 }
-                else
-                {
-                    parse_logi("[usage] scr ri <interval_h>. Set the interval of automatic reinitialization of the screen. Unit: hour.");
+                else {
+                    u32 interval;
+                    if (sscanf(dat + 6, "%lu", &interval) == 1)
+                    {
+                        interval = display_set_reinit_interval_h(interval);
+                        if (interval == 0) {
+                            parse_logi("Automatic reinitialization is turned off.");
+                        }
+                        else {
+                            parse_logi("Set reinit interval to %u hours.", interval);
+                        }
+                    }
+                    else
+                    {
+                        parse_logi("[usage] scr ri <interval_h>. Set the interval of automatic reinitialization of the screen. Unit: hour.");
+                    }
                 }
-            }
+            #else
+                parse_loge(DISPLAY_REINIT_REFUSE_STR);
+            #endif
         }
         else if (begins_with_str(dat + 3, " err")) {
             parse_logi("Display I2C error code: %d.", display_get_i2c_error_code());

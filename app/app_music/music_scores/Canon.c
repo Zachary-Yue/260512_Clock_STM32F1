@@ -100,7 +100,9 @@ static const u8 main_5[] = {
     A6, P1_4, F6, P1_4, A6, P1_4, C7, P1_4,
     B6, P1_4, A6, P1_4, G6, P1_4, C7, P1_4,
     C7, P1_4, G6, P1_4, D7, P1_4, G6, P1_4,
+};
 
+static const u8 main_5_1[] = {
     // 57
     C7, P1, E7, P1_2, F7, P1_2, G7, P1_2, A7, P1_2, G7, P1_2, F7, P1_2,
     C7, P1, C7, P1_2, D7, P1_2, E7, P1_2, F7, P1_2, E7, P1_2, D7, P1_2,
@@ -128,7 +130,8 @@ static const melody_t main[] = {
     {main_3, sizeof(main_3)},
     {main_4, sizeof(main_4)},
     {main_5, sizeof(main_5)},
-    {main_5, sizeof(main_5)},
+    {main_5_1, sizeof(main_5_1)},
+    {main_5_1, sizeof(main_5_1)},
     {main_6, sizeof(main_6)},
     {main_6, sizeof(main_6)},
     {main_7, sizeof(main_7)},
@@ -155,7 +158,7 @@ static const u8 c1_2[] = {
 static const u8 c1_3[] = {
     // 10
     A4, P1_2, E5, P1_2, A5, P1_2, C6, P1_2,  E4, P1_2, E5, P1_2, G5, P1_2, B5, P1_2,
-    F4, P1_2, C5, P1_2, F5, P1_2, A5, P1_2,  C5, P1_2, E5, P1_2, G5, P1_2, C5, P1_2,
+    F4, P1_2, C5, P1_2, F5, P1_2, A5, P1_2,  C5, P1_2, E5, P1_2, G5, P1_2, C6, P1_2,
     F4, P1_2, C5, P1_2, F5, P1_2, A5, P1_2,  G4, P1_2, D5, P1_2, G5, P1_2, B5, P1_2,
 };
 
@@ -164,12 +167,17 @@ static const u8 c1_4[] = {
     C5, P1_2, E5, P1_2, G5, P1_2, C6, P1_2,  G4, P1_2, D5, P1_2, G5, P1_2, B5, P1_2,
 };
 
+static const u8 c1_2_1[] = {
+    // 21
+    C5, P1_2, E5, P1_2, G5, P1_2, C6, P1_2,  B4, P1_2, D5, P1_2, G5, P1_2, B5, P1_2,
+};
+
 static const u8 c1_5[] = {
-    // 14
+    // 29
     C5, P1_2, G5, P1_2, C6, P1,  G4, P1_2, D5, P1_2, B5, P1,
     A4, P1_2, E5, P1_2, C6, P1,  E4, P1_2, E5, P1_2, G5, P1,
     F4, P1_2, C5, P1_2, A5, P1,  C5, P1_2, G5, P1_2, C6, P1,
-    F4, P1_2, C5, P1_2, A5, P1,  F4, P1_2, D5, P1_2, B6, P1,
+    F4, P1_2, C5, P1_2, A5, P1,  F4, P1_2, D5, P1_2, B5, P1,
 };
 
 static const u8 c1_6[] = {
@@ -180,7 +188,6 @@ static const u8 c1_6[] = {
 
 static const melody_t c1[] = {
     {c1_1, sizeof(c1_1)},
-    {c1_1, sizeof(c1_1)},
 
     {c1_2, sizeof(c1_2)},
     {c1_3, sizeof(c1_3)},
@@ -188,15 +195,17 @@ static const melody_t c1[] = {
     {c1_3, sizeof(c1_3)},
     {c1_4, sizeof(c1_4)},
     {c1_3, sizeof(c1_3)},
-    {c1_2, sizeof(c1_2)},
+    {c1_2_1, sizeof(c1_2_1)},
     {c1_3, sizeof(c1_3)},
 
     {c1_4, sizeof(c1_4)}, // 25
     {c1_3, sizeof(c1_3)},
-    {c1_5, sizeof(c1_5)},
-    {c1_5, sizeof(c1_5)},
-    {c1_5, sizeof(c1_5)},
+    {c1_5, sizeof(c1_5)}, // 29
+    {c1_5, sizeof(c1_5)}, // 33
+    {c1_5, sizeof(c1_5)}, // 37
 
+    {c1_2, sizeof(c1_2)}, // 41
+    {c1_3, sizeof(c1_3)},
     {c1_4, sizeof(c1_4)}, // 45
     {c1_3, sizeof(c1_3)},
     {c1_4, sizeof(c1_4)}, // 49
@@ -223,6 +232,8 @@ static const music_t music_c1 = {
 /*---------------------------- C2 ----------------------------*/
 
 static const u8 c2_1[] = {
+    // 1
+    REST, P8, REST, P8,
     // 5
     E7, P2, D7, P2, C7, P2, B6, P2, A6, P2, G6, P2, A6, P2, B6, P2,
     E7, P2, D7, P2, REST, P8, A6, P2, G6, P2,

@@ -109,31 +109,48 @@ void display_scr_on_off(bool on)
     }
 }
 
+#if DISPLAY_EN_REINIT
 static u32 display_reinit_interval_s = 0; // Off by default
 static u32 display_reinit_cnt = 0;
+#endif
 
 /* 定时重启显示屏，因为 I2C 容易死机 */
 void display_reinit_timer(void)
 {
-    if (display_reinit_interval_s == 0) return;
-    if (++display_reinit_cnt >= display_reinit_interval_s) {
-        display_reinit_cnt = 0;
-        LOGI(TAG, "Reinitializing display...");
-        display_init();
-    }
+    #if DISPLAY_EN_REINIT
+        if (display_reinit_interval_s == 0) return;
+        if (++display_reinit_cnt >= display_reinit_interval_s) {
+            display_reinit_cnt = 0;
+            LOGI(TAG, "Reinitializing display...");
+            display_init();
+        }
+    #else
+        LOGE(TAG, DISPLAY_REINIT_REFUSE_STR);
+    #endif
 }
 
 u32 display_set_reinit_interval_h(u32 interval_h)
 {
-    interval_h > (u32)(-1) / 3600 ? (interval_h = (u32)(-1) / 3600) : (void)0;
-    display_reinit_interval_s = interval_h * 3600;
-    display_reinit_cnt = 0;
-    return interval_h;
+    #if DISPLAY_EN_REINIT
+        interval_h > (u32)(-1) / 3600 ? (interval_h = (u32)(-1) / 3600) : (void)0;
+        display_reinit_interval_s = interval_h * 3600;
+        display_reinit_cnt = 0;
+        return interval_h;
+    #else
+        USER_UNUSED(interval_h);
+        LOGE(TAG, DISPLAY_REINIT_REFUSE_STR);
+        return 0;
+    #endif
 }
 
 u32 display_get_reinit_interval_h(void)
 {
-    return display_reinit_interval_s / 3600;
+    #if DISPLAY_EN_REINIT
+        return display_reinit_interval_s / 3600;
+    #else
+        LOGE(TAG, DISPLAY_REINIT_REFUSE_STR);
+        return 0;
+    #endif
 }
 
 u32 display_get_i2c_error_code(void)
@@ -144,4 +161,9 @@ u32 display_get_i2c_error_code(void)
 u32 display_get_i2c_state(void)
 {
     return hi2c1.State;
+}
+
+void display_power_off(void)
+{
+    OLED_POWER_OFF();
 }
