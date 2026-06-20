@@ -4,8 +4,6 @@
 #include "debug.h"
 #include "bt.h"
 
-#define TAG "Time"
-
 #define IconExist_TIME                  (60)
 
 /*-------------------------------- Variables -------------------------------*/
@@ -106,7 +104,7 @@ static void Alarm_Handler(void)
 {
     app_music_play(Alarm_MusicNo);
     Alarm_IconExistCnt = IconExist_TIME + 1;
-    bt_printf(TAG, "Alarm: alarm time reached.\r\n");
+    bt_printf("Alarm: alarm time reached.\r\n");
 }
 
 
@@ -114,7 +112,7 @@ static void Timer_Handler(void)
 {
     app_music_play(Timer_MusicNo);
     Timer_IconExistCnt = IconExist_TIME + 1;
-    bt_printf(TAG, "Timer: time's up.\r\n");
+    bt_printf("Timer: time's up.\r\n");
 }
 
 

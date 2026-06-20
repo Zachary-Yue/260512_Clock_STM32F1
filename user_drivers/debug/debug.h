@@ -42,7 +42,7 @@ void debug_init(void);
 /*-------------------------------- Log -------------------------------*/
 
 #ifndef LOG_ENABLE
-#define LOG_ENABLE 1    // whether enable log output using LOGI, LOGW, LOGE macros.
+#define LOG_ENABLE 0    // whether enable log output using LOGI, LOGW, LOGE macros.
 #endif
 
 #if LOG_ENABLE

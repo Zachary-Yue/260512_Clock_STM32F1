@@ -77,8 +77,8 @@ void display_init(void)
 
     i2c_send_abort(&hi2c1);
     i2c1_reset();
-    // OLED_POWER_OFF();
-    // LL_mDelay(10);
+    OLED_POWER_OFF();
+    LL_mDelay(20);
     OLED_POWER_ON();
     LL_mDelay(10);
 
@@ -161,9 +161,4 @@ u32 display_get_i2c_error_code(void)
 u32 display_get_i2c_state(void)
 {
     return hi2c1.State;
-}
-
-void display_power_off(void)
-{
-    OLED_POWER_OFF();
 }

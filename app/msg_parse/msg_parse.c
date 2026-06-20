@@ -606,8 +606,6 @@ static void s_message_parse_normal(const char *dat, u16 len)
         else if (begins_with_str(dat + 3, " reinit"))
         {
             parse_logi("Start reinit.");
-            display_power_off();
-            LL_mDelay(50);
             display_init();
             parse_logi("Reinit OK.");
         }

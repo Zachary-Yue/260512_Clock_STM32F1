@@ -33,4 +33,3 @@ u32  display_set_reinit_interval_h(u32 interval_h);
 u32  display_get_reinit_interval_h(void);
 u32  display_get_i2c_error_code(void);
 u32  display_get_i2c_state(void);
-void display_power_off(void);
