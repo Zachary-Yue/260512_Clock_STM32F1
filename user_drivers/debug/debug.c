@@ -7,6 +7,7 @@
 #include "user_phr.h"
 #include "system.h"
 #include "bt.h"
+#include "temp.h"
 
 #define TAG "DEBUG"
 
@@ -67,6 +68,9 @@ void debug_rx_dataproc_handler(u8 *data, u16 len)
         debug_send_all();
         bt_disconnect();
         sys_reset();
+    }
+    else if (begins_with_str(data, "temp")) {
+        LOGI(TAG, "Current temperature: %d.%d°C", t_int, t_deci_1);
     }
     else {
         LOGW(TAG, "Received unknown command: %.*s", len, data);

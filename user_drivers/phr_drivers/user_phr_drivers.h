@@ -4,3 +4,4 @@
 #include "user_uart.h"
 #include "user_dma.h"
 #include "user_i2c.h"
+#include "user_tick.h"

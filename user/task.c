@@ -21,7 +21,7 @@ typedef struct
 Task_t Task[TASK_TOTAL] =
 {
     // ms, count, taskHook
-    { 1000, 0, light_task },
+    // { 1000, 0, light_task },
     { 1000, 0, display_reinit_timer },
     { 100, 0, display_task },
     { 5000, 0, app_battery_task },

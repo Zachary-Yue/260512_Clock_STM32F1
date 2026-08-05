@@ -29,6 +29,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "system.h"
+#include "temp.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -124,6 +125,7 @@ int main(void)
   while (1)
   {
     sys_task();
+    temp_task();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

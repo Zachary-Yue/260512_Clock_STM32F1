@@ -15,6 +15,7 @@ typedef enum page_enum
     PAGE_Alarm,
     PAGE_Timer,
     PAGE_Watch,
+    PAGE_TEMP,
 
     PAGE_TOTAL
 } page_enum;

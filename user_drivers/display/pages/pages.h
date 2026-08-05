@@ -6,3 +6,4 @@
 #include "Page_Timer.h"
 #include "Page_Watch.h"
 #include "Page_Cldr.h"
+#include "Page_Temp.h"

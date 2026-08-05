@@ -50,6 +50,7 @@ void display_subtrate(void)
         case PAGE_Alarm: Page_Alarm_Subtrate(); break;
         case PAGE_Timer: Page_Timer_Subtrate(); break;
         case PAGE_Watch: Page_Watch_Subtrate(); break;
+        case PAGE_TEMP: Page_Temp_Subtrate(); break;
     }
 }
 
@@ -66,6 +67,7 @@ void display_task(void)
         case PAGE_Alarm: Page_Alarm_Task(); break;
         case PAGE_Timer: Page_Timer_Task(); break;
         case PAGE_Watch: Page_Watch_Task(); break;
+        case PAGE_TEMP: Page_Temp_Task(); break;
     }
 
     i2c_oled_refresh(&oled);
@@ -125,7 +127,7 @@ void display_reinit_timer(void)
             display_init();
         }
     #else
-        LOGE(TAG, DISPLAY_REINIT_REFUSE_STR);
+        // LOGE(TAG, DISPLAY_REINIT_REFUSE_STR);
     #endif
 }
 

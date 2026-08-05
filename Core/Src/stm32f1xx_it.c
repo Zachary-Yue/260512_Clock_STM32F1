@@ -23,6 +23,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "task.h"
+#include "os_task.h"
 #include "user_phr.h"
 #include "app_clock.h"
 #include "app_music.h"
@@ -194,6 +195,7 @@ void SysTick_Handler(void)
 
   user_tick_handler();
   task_counter_inc();
+  os_task_update();
 
   /* USER CODE END SysTick_IRQn 1 */
 }

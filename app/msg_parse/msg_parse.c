@@ -5,6 +5,7 @@
 
 #include "system.h"
 #include "bt.h"
+#include "temp.h"
 #include "display.h"
 #include "app_music.h"
 #include "app_clock.h"
@@ -485,10 +486,11 @@ static void s_message_parse_normal(const char *dat, u16 len)
         else if (begins_with_str(dat + 5, "alarm")) curr_page = PAGE_Alarm;
         else if (begins_with_str(dat + 5, "timer")) curr_page = PAGE_Timer;
         else if (begins_with_str(dat + 5, "watch")) curr_page = PAGE_Watch;
+        else if (begins_with_str(dat + 5, "temp")) curr_page = PAGE_TEMP;
         else
         {
             cmd_valid = false;
-            parse_logi("[usage] page <name>. Where <name> could be \'main\',\'cldr\',\'alarm\',\'timer\',\'watch\'.");
+            parse_logi("[usage] page <name>. Where <name> could be \'main\',\'cldr\',\'alarm\',\'timer\',\'watch\',\'temp\'.");
         }
         if (cmd_valid) display_subtrate();
     }
@@ -694,6 +696,11 @@ static void s_message_parse_normal(const char *dat, u16 len)
             else parse_printf(" ");
         }
         parse_printf("] %d%%\r\n", level);
+    }
+
+    /* Temperature */
+    else if (begins_with_str(dat, "temp")) {
+        parse_logi("Current temperature: %d.%d °C", t_int, t_deci_1);
     }
 
     /* Static Logs */

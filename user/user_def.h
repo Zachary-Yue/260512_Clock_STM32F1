@@ -21,6 +21,7 @@ extern "C" {
 #include <math.h>
 #include <stdbool.h>
 #include <stdint.h>
+#include <stdlib.h>
 
 /*-------------------------------- Basic -------------------------------*/
 
@@ -31,8 +32,8 @@ typedef int8_t s8;
 typedef int16_t s16;
 typedef int32_t s32;
 
-#define Bit_RESET       ((u32)(0))
-#define Bit_SET         ((u32)(1))
+#define Bit_RESET           ((u32)(0))
+#define Bit_SET             ((u32)(1))
 
 #ifndef max
     #define max(a, b)       ((a) > (b) ? (a) : (b))
@@ -40,8 +41,15 @@ typedef int32_t s32;
 #ifndef min
     #define min(a, b)       ((a) < (b) ? (a) : (b))
 #endif
+#ifndef mid
+    #define mid(a, b, c)    (max(min((a), (b)), min(max((a), (b)), (c))))
+#endif
+#ifndef abs
+    // #define abs(x)          (((x) > 0) ? (x) : -(x))
+#endif
 
-#define BIT(n)          ((u32)(1U << (n)))
+#define BIT(n)              ((u32)(1U << (n)))
+#define MAKEWORD(lo, hi)    ((u16)(((u8)(lo)) | (((u16)((u8)(hi))) << 8)))
 
 /*-------------------------------- Compiler -------------------------------*/
 
@@ -54,15 +62,15 @@ typedef int32_t s32;
 #endif
 
 #ifndef IS_ISR_CONTEXT
-#define IS_ISR_CONTEXT() (__get_IPSR() != 0U)
+#define IS_ISR_CONTEXT()    (__get_IPSR() != 0U)
 #endif // !IS_ISR_CONTEXT
 
 /*-------------------------------- Extension -------------------------------*/
 
-#define USER_UNUSED(x)  (void)(x)
+#define USER_UNUSED(x)      (void)(x)
 
 #define begins_with_str(str, cstr) (strncmp((char*)(str), (cstr), sizeof(cstr) - 1) == 0)
-#define lenof_cstr(cstr) (sizeof(cstr) - 1)
+#define lenof_cstr(cstr)    (sizeof(cstr) - 1)
 
 #ifdef __cplusplus
 } // extern "C"
