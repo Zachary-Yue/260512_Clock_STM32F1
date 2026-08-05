@@ -22,14 +22,15 @@ typedef enum page_enum
 
 extern page_enum curr_page;
 extern i2c_oled_t oled;
+extern u8 disp_fps;                 // 上一秒成功刷新帧数（调试备用）
 
 #define display_scr_is_on() (oled.scr_is_on)
 
 void display_init(void);
 void display_subtrate(void);
 void display_task(void);
+void display_fps_task(void);
 void display_scr_on_off(bool on);
-void display_reinit_timer(void);
 u32  display_set_reinit_interval_h(u32 interval_h);
 u32  display_get_reinit_interval_h(void);
 u32  display_get_i2c_error_code(void);

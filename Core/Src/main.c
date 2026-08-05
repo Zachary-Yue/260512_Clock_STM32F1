@@ -28,8 +28,14 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "system.h"
 #include "temp.h"
+#include "display.h"
+#include "app_battery.h"
+#include "debug.h"
+#include "bt.h"
+#include "user_phr.h"
+#include "app_music.h"
+#include "app_clock.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -116,7 +122,15 @@ int main(void)
   MX_ADC2_Init();
   /* USER CODE BEGIN 2 */
 
-  sys_init();
+  /* ---- System init (formerly sys_init()) ---- */
+  SysTick_Config(SystemCoreClock / 1000); // 1ms 时基中断（LL_Init1msTick 只启动计数，不使能 SysTick_IRQn）
+  user_phr_init();   // I2C/UART/DMA 句柄；内部调用 app_battery_init()
+  debug_init();
+  bt_init();
+  app_music_init();
+  Clock_Init();
+  LOGI("MAIN", "System init finished.");
+  /* display_init() 已并入 display_task（任务启动 50ms 后调用），不再在此初始化 */
 
   /* USER CODE END 2 */
 
@@ -124,8 +138,18 @@ int main(void)
   /* USER CODE BEGIN WHILE */
   while (1)
   {
-    sys_task();
+    /* I/O 轮询泵（保持普通函数调用，不转 os_task） */
+    debug_send();
+    debug_recv();
+    bt_send();
+    bt_recv();
+
+    /* os_task 协程任务（每轮都必须调用，内部自行挂起/恢复） */
     temp_task();
+    display_task();
+    display_fps_task();
+    app_battery_task();
+    app_battery_report_lp_task();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

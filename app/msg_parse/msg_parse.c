@@ -736,6 +736,9 @@ static void s_message_parse_normal(const char *dat, u16 len)
         parse_logw("Are you sure to reset the system? (Type \"y\" to perform or other to cancel)");
         parse_state = PARSE_STATE_CONFIRM_RESET;
     }
+    else if (begins_with_str(dat, "fps")) {
+        parse_logi("Current display: %d FPS", disp_fps);
+    }
 
     /* No cmd  */
     else

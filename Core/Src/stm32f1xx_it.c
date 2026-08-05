@@ -22,7 +22,6 @@
 #include "stm32f1xx_it.h"
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-#include "task.h"
 #include "os_task.h"
 #include "user_phr.h"
 #include "app_clock.h"
@@ -194,7 +193,6 @@ void SysTick_Handler(void)
   /* USER CODE BEGIN SysTick_IRQn 1 */
 
   user_tick_handler();
-  task_counter_inc();
   os_task_update();
 
   /* USER CODE END SysTick_IRQn 1 */

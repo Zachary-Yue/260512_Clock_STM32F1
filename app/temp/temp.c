@@ -18,7 +18,6 @@
 #include "system.h"
 #include "ow.h"
 #include "os_task.h"
-#include "light.h"
 #include "user_phr_drivers.h"
 
 #define TAG "TEMP"

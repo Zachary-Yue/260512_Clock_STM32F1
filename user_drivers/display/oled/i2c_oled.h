@@ -7,7 +7,6 @@ typedef struct i2c_oled_t {
     u8 *display_buf; // display buffer of 0.96 inch oled (usually 128 * 8)
     bool (*i2c_mem_write_block)(u8 slvaddr, u8 memaddr, u8 *data, u16 len); // i2c operation function
     bool (*i2c_mem_write_dma)(u8 slvaddr, u8 memaddr, u8 *data, u16 len); // i2c operation function
-    void (*i2c_send_reset)(void); // i2c operation function to reset the i2c bus
     u16 display_buf_size; // display buffer size (usually 128 * 8)
     u16 width; // horizon-size of the screen (usually 128)
     u16 height; // vertical size of the screen (usually 64)
@@ -18,13 +17,13 @@ typedef struct i2c_oled_t {
     u8 i2c_addr; // i2c address of the screen
     bool is_init;
     bool scr_is_on;
+    volatile bool is_refreshing; // DMA 帧刷新进行中（主循环置位，I2C 完成回调清除，须 volatile）
 } i2c_oled_t;
 
 typedef struct i2c_oled_cfg_t {
     u8 *display_buf; // display buffer of 0.96 inch oled (usually 128 * 8)
     bool (*i2c_mem_write_block)(u8 slvaddr, u8 memaddr, u8 *data, u16 len); // i2c operation function
     bool (*i2c_mem_write_dma)(u8 slvaddr, u8 memaddr, u8 *data, u16 len); // i2c operation function
-    void (*i2c_send_reset)(void); // i2c operation function to reset the i2c bus
     u16 display_buf_size; // display buffer size (usually 128 * 8)
     u16 width; // horizon-size of the screen (usually 128)
     u16 height; // vertical size of the screen (usually 64)

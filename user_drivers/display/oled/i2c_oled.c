@@ -2,8 +2,6 @@
 #include "i2c_oled.h"
 #include "sys_err.h"
 
-#define TAG "i2c_oled"
-
 #define OLED_CONTROLBYTE_CMD_STREAM     (0x00) // 多字节命令 0000 0000b
 #define OLED_CONTROLBYTE_CMD_SINGLE     (0x80) // 单字节命令 1000 0000b
 #define OLED_CONTROLBYTE_DATA           (0x40) // 传输数据   0100 0000b
@@ -12,8 +10,6 @@
 #define OLED_DISPLAY_OFF                (0xAE)
 
 #define OLED_DISPGRAPH_SIZE             ((u16)(8*128))
-
-#define OLED_I2C_RETRY_MAX              (9)
 
 static const u8 init[] = {
     OLED_DISPLAY_OFF, // 关闭显示
@@ -67,10 +63,10 @@ bool i2c_oled_init(i2c_oled_t *oled, i2c_oled_cfg_t *cfg)
 
     oled->is_init = false;
     oled->scr_is_on = true;
+    oled->is_refreshing = false;
     oled->display_buf = cfg->display_buf;
     oled->i2c_mem_write_block = cfg->i2c_mem_write_block;
     oled->i2c_mem_write_dma = cfg->i2c_mem_write_dma;
-    oled->i2c_send_reset = cfg->i2c_send_reset;
     oled->display_buf_size = cfg->display_buf_size;
     oled->width = cfg->width;
     oled->height = cfg->height;
@@ -103,30 +99,21 @@ void i2c_oled_clear(i2c_oled_t *oled)
 
 /**
  * @brief Refresh the screen with the content of the display buffer.
- * 
+ *
  * @param oled OLED handle
  * @return true on success
  * @return false on failure (invalid parameters or i2c operation failure)
  */
 bool i2c_oled_refresh(i2c_oled_t *oled)
 {
-    static u8 retry = 0;
     CHECK_FALSE_RET(oled, false);
     CHECK_FALSE_RET(oled->is_init == true, false);
     CHECK_FALSE_RET(oled->display_buf && oled->i2c_mem_write_dma, false);
     if (oled->i2c_mem_write_dma(oled->i2c_addr, OLED_CONTROLBYTE_DATA, oled->display_buf, oled->display_buf_size)) {
-        retry = 0;
+        oled->is_refreshing = true;   // DMA 已启动，等待完成回调清除
         return true;
     }
-    if (retry < OLED_I2C_RETRY_MAX) {
-        retry++;
-        return false;
-    }
-    retry = 0;
-    if (oled->i2c_send_reset) {
-        oled->i2c_send_reset();
-        SLOGI(TAG, "I2C bus reset");
-    }
+    oled->is_refreshing = false;      // 启动失败，显式复位（自文档化）
     return false;
 }
 
