@@ -51,7 +51,7 @@ void ow_write(u8 dat)
 u8 ow_read(void)
 {
 	u8 i;
-	u8 dat;
+	u8 dat = 0;
 
 	for (i = 0; i < 8; i++)
 	{
