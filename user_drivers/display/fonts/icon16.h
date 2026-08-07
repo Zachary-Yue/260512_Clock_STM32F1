@@ -10,6 +10,7 @@
 #define Icon16_MUSIC_NOTE           4
 #define Icon16_LOW_BATTERY          5
 #define Icon16_TEMPERATURE          6
+#define Icon16_WATER_DROP           7
 
 void oled_show_icon16(u8 row, u8 col, u8 index);
 

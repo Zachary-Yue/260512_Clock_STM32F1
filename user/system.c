@@ -13,6 +13,9 @@
 
 #define TAG "SYSTEM"
 
+u32 sys_primask_ = 0UL;
+u32 sys_critical_count_ = 0;
+
 static void systick_init(void)
 {
     // 1ms 中断

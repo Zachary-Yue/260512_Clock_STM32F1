@@ -2,6 +2,7 @@
 #include "msg_parse.h"
 #include "sys_err.h"
 #include <stdlib.h>
+#include "os_task.h"
 
 #include "system.h"
 #include "bt.h"
@@ -10,13 +11,13 @@
 #include "app_music.h"
 #include "app_clock.h"
 #include "app_battery.h"
-
-// #define TAG "PARSE"
+#include "dht11.h"
 
 #define PARSE_STATE_NORMAL 0
 #define PARSE_STATE_CONFIRM_RESET 1
 
 static u8 parse_state = 0;
+static bool task_send_help_flag = false;
 
 #define parse_printf(fmt, ...) bt_printf(fmt, ##__VA_ARGS__)
 #define parse_logi(fmt, ...) bt_printf(fmt "\r\n", ##__VA_ARGS__)
@@ -31,6 +32,7 @@ static u8 parse_state = 0;
 #define STR_ON "on"
 #define STR_OFF "off"
 
+void send_help_task(void);
 static void s_message_parse_normal(const char *dat, u16 len);
 static void slog_read(void);
 
@@ -666,24 +668,8 @@ static void s_message_parse_normal(const char *dat, u16 len)
     #endif
 
     /* Help */
-    else if (begins_with_str(dat, "hello") || begins_with_str(dat, "help"))
-    {
-        parse_send_all();
-        parse_logi( "Hello! This is your lovely clock. Here are the commands:\r\n"
-                    "\t(1) Music: (a) play [<num>] (b) stop (c) pause\r\n"
-                    "\t(2) Pages: page <name>\r\n");
-        parse_send_all();
-        LL_mDelay(20);
-        parse_logi( "\t(3) Time: (a) font <num> (b) set <...> (c) time (d) date\r\n"
-                    "\t(4) Alarm: alarm <...>\r\n"
-                    "\t(5) Timer: timer <...>\r\n"
-                    "\t(6) Watch: watch <...>\r\n");
-        parse_send_all();
-        LL_mDelay(20);
-        parse_logi( "\t(7) Screen: (a) scr reinit (b) scr <on/off> (c) scr ri <interval_h>\r\n"
-                    "\t(8) Battery: bat\r\n"
-                    "\t(9) Static Logs: slog <opt>\r\n"
-                    "Type them with a space to see their instructions.");
+    else if (begins_with_str(dat, "hello") || begins_with_str(dat, "help")) {
+        task_send_help_flag = true;
     }
 
     /* Battery */
@@ -698,10 +684,14 @@ static void s_message_parse_normal(const char *dat, u16 len)
         parse_printf("] %d%%\r\n", level);
     }
 
-    /* Temperature */
+    /* Temperature & Humidity */
     else if (begins_with_str(dat, "temp")) {
-        parse_logi("Current temperature: %d.%d °C", t_int, t_deci_1);
+        parse_logi("Current temperature: %d.%d °C, humidity: %d%%", t_int, t_deci_1, hum_int);
     }
+    // debug for humidity
+    // else if (begins_with_str(dat, "hum")) {
+    //     parse_logi("Current humidity: %d%%, temp: %d.%d °C", DHT11_Data.humi_int, DHT11_Data.temp_int, DHT11_Data.temp_deci);
+    // }
 
     /* Static Logs */
     else if (begins_with_str(dat, "slog")) {
@@ -782,4 +772,33 @@ static void slog_read(void)
             parse_logi("\r\n--- End of static logs ---\r\n");
         }
     }
+}
+
+void send_help_task(void)
+{
+    task_start(TASK_SEND_HELP);
+    task_wait_until(task_send_help_flag);
+    task_send_help_flag = false;
+
+    parse_send_all();
+    parse_logi( "Hello! This is your lovely clock. Here are the commands:\r\n"
+                "\t(1) Music: (a) play [<num>] (b) stop (c) pause\r\n"
+                "\t(2) Pages: page <name>\r\n");
+    parse_send_all();
+    task_delay(20);
+    parse_logi( "\t(3) Time: (a) font <num> (b) set <...> (c) time (d) date\r\n"
+                "\t(4) Alarm: alarm <...>\r\n"
+                "\t(5) Timer: timer <...>\r\n"
+                "\t(6) Watch: watch <...>\r\n");
+    parse_send_all();
+    task_delay(20);
+    parse_logi( "\t(7) Screen: (a) scr reinit (b) scr <on/off> (c) scr ri <interval_h>\r\n"
+                "\t(8) Battery: bat\r\n"
+                "\t(9) Static Logs: slog <opt>\r\n"
+                "\t(10) Temperature & Humidity: temp\r\n");
+    parse_send_all();
+    task_delay(20);
+    parse_logi("Type them with a space to see their instructions.");
+
+    task_end(1);
 }

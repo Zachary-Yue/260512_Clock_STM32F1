@@ -30,6 +30,8 @@
 /* USER CODE BEGIN Includes */
 #include "system.h"
 #include "temp.h"
+#include "dht11.h"
+#include "msg_parse.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -126,6 +128,8 @@ int main(void)
   {
     sys_task();
     temp_task();
+    dht11_task();
+    send_help_task();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

@@ -54,7 +54,7 @@ void MX_GPIO_Init(void)
   LL_GPIO_SetOutputPin(LED0_GPIO_Port, LED0_Pin);
 
   /**/
-  LL_GPIO_SetOutputPin(GPIOA, TEMP_Pin|OLED_POWER_Pin);
+  LL_GPIO_SetOutputPin(GPIOA, HUMI_Pin|TEMP_Pin|OLED_POWER_Pin);
 
   /**/
   GPIO_InitStruct.Pin = LED0_Pin;
@@ -64,12 +64,12 @@ void MX_GPIO_Init(void)
   LL_GPIO_Init(LED0_GPIO_Port, &GPIO_InitStruct);
 
   /**/
-  GPIO_InitStruct.Pin = TEMP_Pin;
+  GPIO_InitStruct.Pin = HUMI_Pin|TEMP_Pin;
   GPIO_InitStruct.Mode = LL_GPIO_MODE_OUTPUT;
   GPIO_InitStruct.Speed = LL_GPIO_SPEED_FREQ_MEDIUM;
   GPIO_InitStruct.OutputType = LL_GPIO_OUTPUT_OPENDRAIN;
   GPIO_InitStruct.Pull = LL_GPIO_PULL_UP;
-  LL_GPIO_Init(TEMP_GPIO_Port, &GPIO_InitStruct);
+  LL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
   /**/
   GPIO_InitStruct.Pin = OLED_POWER_Pin;

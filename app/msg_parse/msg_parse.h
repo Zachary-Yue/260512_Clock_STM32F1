@@ -4,3 +4,4 @@
 #include "main.h"
 
 void app_message_parse(const char *dat, u16 len);
+void send_help_task(void);

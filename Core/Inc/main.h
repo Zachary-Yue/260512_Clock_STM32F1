@@ -80,6 +80,8 @@ void Error_Handler(void);
 #define LED0_GPIO_Port GPIOC
 #define BUZZ1_Pin LL_GPIO_PIN_0
 #define BUZZ1_GPIO_Port GPIOA
+#define HUMI_Pin LL_GPIO_PIN_2
+#define HUMI_GPIO_Port GPIOA
 #define TEMP_Pin LL_GPIO_PIN_3
 #define TEMP_GPIO_Port GPIOA
 #define BATTERY_Pin LL_GPIO_PIN_5

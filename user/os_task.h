@@ -6,6 +6,8 @@
 typedef enum os_task_e
 {
 	TASK_TEMP,
+	TASK_DHT11,
+	TASK_SEND_HELP,
 
 	TASK_MAX
 } os_task_e;
@@ -34,17 +36,23 @@ void os_task_update(void);
 		case 0:
 
 // 等待表达式变成真
-#define task_wait(ifx)                        \
+#define task_wait_until(ifx)                  \
 	user_tasks_[this_task_].state = __LINE__; \
 	case __LINE__:                            \
 		if (LIKELY(!(ifx)))                   \
 			break;
 
+#define task_wait_while(ifx)                  \
+	user_tasks_[this_task_].state = __LINE__; \
+	case __LINE__:                            \
+		if (LIKELY(ifx))                      \
+			break;
+
 // 延时后继续向下，内部填入延时ms时间，等待时间后继续向下
-#define task_delay(delay_ms)                   \
-	user_tasks_[this_task_].state = __LINE__;  \
-	user_tasks_[this_task_].time = delay_ms;   \
-	case __LINE__:                             \
+#define task_delay(delay_ms)                           \
+	user_tasks_[this_task_].state = __LINE__;          \
+	user_tasks_[this_task_].time = delay_ms;           \
+	case __LINE__:                                     \
 		if (LIKELY(user_tasks_[this_task_].time != 0)) \
 			break;
 
@@ -55,7 +63,7 @@ void os_task_update(void);
 	case __LINE__:                            \
 		for (task_for_cnt_ = 1; task_for_cnt_--; cnt, user_tasks_[this_task_].state = __LINE__)
 
-// while(1) 循环，判断条件通过 task_break 进行判断跳出
+// while(1) 循环，判断条件通过 task_loop 进行判断跳出
 #define task_while(ifx)                       \
 	user_tasks_[this_task_].state = __LINE__; \
 	case __LINE__:                            \
@@ -64,6 +72,17 @@ void os_task_update(void);
 // 对 ifx 的条件进行判断，为 1 则回到 task_for/task_while 的开始，为 0 则往下继续执行
 #define task_loop(ifx) \
 	if (ifx)           \
+		break;
+
+// 循环体内跳过本轮剩余代码，下一轮从循环头继续（语义等同 C 的 continue）。
+// 只能在 task_for / task_while 的循环体内使用。不能在 while / for 中使用以企图跳出 task_for / task_while 循环体。
+#define task_continue() \
+	continue;
+
+// 任务停止在此处，即让任务 terminated。
+#define task_exit()                           \
+	user_tasks_[this_task_].state = __LINE__; \
+	case __LINE__:                            \
 		break;
 
 // 线程结束，内部填入是否重新开始线程，1 为重新开始，0 为结束等待
