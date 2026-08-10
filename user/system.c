@@ -10,6 +10,7 @@
 #include "app_music.h"
 #include "app_clock.h"
 #include "user_phr.h"
+#include "t_h_stat.h"
 
 #define TAG "SYSTEM"
 
@@ -31,6 +32,7 @@ void sys_init(void)
     display_init();
     app_music_init();
     Clock_Init();
+    t_h_stat_init();
     LOGI(TAG, "System init finished.");
 }
 

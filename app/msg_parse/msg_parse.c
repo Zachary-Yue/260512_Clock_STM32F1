@@ -7,11 +7,12 @@
 #include "system.h"
 #include "bt.h"
 #include "temp.h"
+#include "dht11.h"
+#include "t_h_stat.h"
 #include "display.h"
 #include "app_music.h"
 #include "app_clock.h"
 #include "app_battery.h"
-#include "dht11.h"
 
 #define PARSE_STATE_NORMAL 0
 #define PARSE_STATE_CONFIRM_RESET 1
@@ -670,6 +671,7 @@ static void s_message_parse_normal(const char *dat, u16 len)
     /* Help */
     else if (begins_with_str(dat, "hello") || begins_with_str(dat, "help")) {
         task_send_help_flag = true;
+        return;
     }
 
     /* Battery */
@@ -686,7 +688,15 @@ static void s_message_parse_normal(const char *dat, u16 len)
 
     /* Temperature & Humidity */
     else if (begins_with_str(dat, "temp")) {
-        parse_logi("Current temperature: %d.%d °C, humidity: %d%%", t_int, t_deci_1, hum_int);
+        if (len == 4) {
+            parse_logi("Current temperature: %d.%d °C, humidity: %d%%", t_int, t_deci_1, hum_int);
+        } else if (begins_with_str(dat + 4, " g")) {
+            // t_h_stat_test();
+            t_h_show_flag = true;
+            return;
+        } else {
+            parse_logi("[usage] temp\t\tinquire current temperature and humidity; temp g\t\tshow temperature and humidity curve.");
+        }
     }
     // debug for humidity
     // else if (begins_with_str(dat, "hum")) {
@@ -799,6 +809,7 @@ void send_help_task(void)
     parse_send_all();
     task_delay(20);
     parse_logi("Type them with a space to see their instructions.");
+    parse_printf("Clock> ");
 
     task_end(1);
 }

@@ -3,6 +3,7 @@
 #include "app_music.h"
 #include "debug.h"
 #include "bt.h"
+#include "t_h_stat.h"
 
 #define IconExist_TIME                  (60)
 
@@ -97,6 +98,10 @@ void Clock_Inc1s_Handler(void)
         Timer_Check(&Timer);
         Watch_Run(&Watch);
         Timer_IconHandler();
+        if (Calendar.sec == 0) {
+            // Minute incrementing callback
+            t_h_stat_store_1min();
+        }
     }
 }
 

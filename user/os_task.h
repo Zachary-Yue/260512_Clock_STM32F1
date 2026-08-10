@@ -8,6 +8,7 @@ typedef enum os_task_e
 	TASK_TEMP,
 	TASK_DHT11,
 	TASK_SEND_HELP,
+	TASK_T_H_STAT_SHOW,
 
 	TASK_MAX
 } os_task_e;
@@ -15,8 +16,8 @@ typedef enum os_task_e
 // 每个任务的数据结构
 typedef struct
 {
-	u16 time;
 	u32 state;
+	u16 time;
 } os_task_t;
 
 extern os_task_e this_task_;			// 当前运行的任务全局标志

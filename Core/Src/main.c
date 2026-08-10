@@ -31,6 +31,7 @@
 #include "system.h"
 #include "temp.h"
 #include "dht11.h"
+#include "t_h_stat.h"
 #include "msg_parse.h"
 /* USER CODE END Includes */
 
@@ -130,6 +131,7 @@ int main(void)
     temp_task();
     dht11_task();
     send_help_task();
+    t_h_stat_show_task();
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
