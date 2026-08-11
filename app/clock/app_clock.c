@@ -22,9 +22,9 @@ u8 Timer_MusicNo = 3, Alarm_MusicNo = 2;
 
 Calendar_t Calendar =
 {
-    .sec = 50,
-    .min = 59,
-    .hour = 23,
+    .sec = 0,
+    .min = 8,
+    .hour = 8,
     .weekday = 1,
     .day = 11,
     .month = 5,

@@ -23,6 +23,7 @@
 #include "os_task.h"
 #include "user_fifo.h"
 #include "user_tick.h"
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -60,10 +61,9 @@ static u8 snap_h_curr, snap_min_curr, snap_day_curr;
 static u16 th_k = 0;        // 当前行号:0..2*snap_cnt-1,前半是温度,后半是湿度
 static u8 th_h, th_m, th_d; // 当前行的时间(从最旧数据的时间开始,每行推进 30 分钟)
 static u32 th_ts = 0;       // 最近一次成功输出的 tick,发送卡死时超时跳出
-static float t_vmin, t_scale; // 温度曲线显示参数
-static u8 t_line_min;
-static float h_vmin, h_scale; // 湿度曲线显示参数
-static u8 h_line_min;
+static float t_scale;       // 温度曲线缩放系数(默认 1 = 0.25°C/字符)
+static s8 t_min_i;          // 温度整数部分最小值(曲线左基准)
+static u8 t_base;           // 最小值对应的横线列(默认 20,超宽时收缩到 2)
 
 bool t_h_show_flag = false;
 
@@ -132,53 +132,57 @@ static u8 t_h_snap_at(u8 k)
     return i;
 }
 
-static float t_h_snap_temp(u8 i) { return (float)t_h_snap[i].ti + (float)t_h_snap[i].td * 0.1f; }
-static float t_h_snap_hum(u8 i)  { return (float)t_h_snap[i].hi; }
-
-// 计算曲线显示参数。
-// chars_per_unit:每字符对应的数值(温度 2 = 0.5°C/字符,湿度 1 = 1%/字符)
-// 数值跨度映射到 [8, 63] 字符,超出则整体缩放;线段左边界固定 2 字符缩进,居中显示
-static void t_h_curve_calc(u8 chars_per_unit, float (*get_v)(u8),
-                           float *vmin, float *scale, u8 *line_min)
+// 计算温度曲线显示参数(湿度曲线按 2%/字符直接映射,无需参数)。
+// 以温度整数部分的最小/最大值为基准,显示范围 = (max+1)-min 度,默认 1 字符 = 0.25°C。
+// 显示范围(极差)限制在 [8, 48] 字符,超出则整体缩放;最小值默认映射到第 20 列,
+// 若 20 + 极差 > 50,则把 max+1 映射到第 50 列(最小值随之收缩到 2 ~ 20 列)
+static void t_h_curve_calc(void)
 {
-    float vmax = 0.0f;
-    *vmin = 0.0f;
+    s8 min_i = 0, max_i = 0;
     for (u8 k = 0; k < snap_cnt; k++)
     {
-        float v = get_v(t_h_snap_at(k));
+        s8 v = t_h_snap[t_h_snap_at(k)].ti;
         if (k == 0)
         {
-            *vmin = vmax = v;
+            min_i = max_i = v;
             continue;
         }
-        if (v < *vmin) *vmin = v;
-        if (v > vmax) vmax = v;
+        if (v < min_i) min_i = v;
+        if (v > max_i) max_i = v;
     }
 
-    float raw_range = (vmax - *vmin) * (float)chars_per_unit; // 数值跨度对应的字符数
-    float range = raw_range;
-    if (raw_range <= 0.0f)      { *scale = 1.0f;             range = 8.0f; }
-    else if (raw_range < 8.0f)  { *scale = 8.0f / raw_range; range = 8.0f; }
-    else if (raw_range > 63.0f) { *scale = 63.0f / raw_range; range = 63.0f; }
-    else                        { *scale = 1.0f; }
-    *line_min = (u8)(2.0f + 32.0f - range * 0.5f + 0.5f);
+    float range_chars = (float)((int)max_i + 1 - (int)min_i) * 4.0f; // (max+1-min)°C × 4 字符/°C
+    float scaled = range_chars;
+    if (range_chars < 8.0f)       scaled = 8.0f;  // 极差 < 2°C:放大到 8 字符
+    else if (range_chars > 48.0f) scaled = 48.0f; // 极差 > 12°C:压缩到 48 字符
+    t_scale = scaled / range_chars;               // range_chars >= 4,不会除零
+    t_base = (20.0f + scaled <= 50.0f) ? 20 : (u8)(50.0f - scaled + 0.5f);
+    t_min_i = min_i;
 }
 
-// 打印一行样本: 时间 + 数值 + 曲线条 + (日期标记)
+// 打印一行样本: 时间 + 曲线条 + 数值标注 + (零点日期标记)。
+// 曲线条最多 50 字符,数值标注紧跟在横线后面(空一格);日期固定写在第 62(湿度)/66(温度)列,
+// 即 50 字符曲线区 + 4/8 字符标注块之后,与横线长度无关
 static void t_h_print_line(u8 h, u8 m, u8 d, bool day_mark, u8 pos, int v_int, int v_dec, bool is_hum)
 {
-    char bar[66];
-    memset(bar, '-', pos);
-    memset(bar + pos, ' ', 65 - pos);
-    bar[65] = '\0';
+    char line[96];
+    u16 n = (u16)snprintf(line, sizeof(line), "%02d:%02d |", h, m);
+    for (u8 i = 0; i < pos; i++)
+        line[n++] = '-';
 
     if (is_hum)
-        show_printf("%2d:%02d  %2d%% |%s|", h, m, v_int, bar);
+        n += (u16)snprintf(line + n, sizeof(line) - n, " %2d%%", v_int);
     else
-        show_printf("%2d:%02d  %2d.%d°C |%s|", h, m, v_int, v_dec, bar);
+        n += (u16)snprintf(line + n, sizeof(line) - n, " %d.%d°C", v_int, v_dec);
 
-    if (day_mark) show_printf(" %d 日", d);
-    show_printf("\r\n");
+    if (day_mark)
+    {
+        u8 date_col = is_hum ? 62 : 66;
+        while (n < date_col - 1) line[n++] = ' ';
+        n += (u16)snprintf(line + n, sizeof(line) - n, "  %d 日", d);
+    }
+    line[n] = '\0';
+    show_printf("%s\r\n", line);
 }
 
 // 打印任务: 逐行输出温度/湿度曲线,每行之间等待发送 FIFO 腾出空间
@@ -204,8 +208,7 @@ void t_h_stat_show_task(void)
         memcpy(t_h_snap, t_h_stat, sizeof(t_h_snap));
         __enable_irq();
 
-        t_h_curve_calc(2, t_h_snap_temp, &t_vmin, &t_scale, &t_line_min);
-        t_h_curve_calc(1, t_h_snap_hum,  &h_vmin, &h_scale, &h_line_min);
+        t_h_curve_calc();
 
         th_k = 0;
         th_h = snap_h_start; th_m = snap_min_start; th_d = snap_day_start;
@@ -249,20 +252,23 @@ void t_h_stat_show_task(void)
             if (th_k < (u16)snap_cnt)
             {
                 u8 i = t_h_snap_at((u8)th_k);
-                float v = (float)t_h_snap[i].ti + (float)t_h_snap[i].td * 0.1f;
-                u8 pos = (u8)(t_line_min + (v - t_vmin) * 2.0f * t_scale + 0.5f);
-                if (pos > 65) pos = 65;
+                s8 ti = t_h_snap[i].ti;
+                u8 td = t_h_snap[i].td;
+                float rel = ((float)((int)ti - (int)t_min_i) + (float)td * 0.1f) * 4.0f * t_scale;
+                u8 pos = (u8)(t_base + rel + 0.5f);
+                if (pos < 2) pos = 2;
+                if (pos > 50) pos = 50;
                 t_h_print_line(th_h, th_m, th_d,
-                               th_k == 0 || (th_h == 0 && th_m == 0),
-                               pos, t_h_snap[i].ti, t_h_snap[i].td, false);
+                               th_h == 0 && th_m == 0,
+                               pos, ti, td, false);
             }
             else
             {
                 u8 i = t_h_snap_at((u8)(th_k - (u16)snap_cnt));
-                u8 pos = (u8)(h_line_min + ((float)t_h_snap[i].hi - h_vmin) * h_scale + 0.5f);
-                if (pos > 65) pos = 65;
+                u8 pos = (u8)((float)t_h_snap[i].hi * 0.5f + 0.5f);
+                if (pos > 50) pos = 50;
                 t_h_print_line(th_h, th_m, th_d,
-                               th_k == (u16)snap_cnt || (th_h == 0 && th_m == 0),
+                               th_h == 0 && th_m == 0,
                                pos, t_h_snap[i].hi, 0, true);
             }
 
@@ -287,6 +293,26 @@ void t_h_stat_test(void)
     u8 cnt = (rand() & 1) ? T_H_STAT_SIZE : (u8)(8 + rand() % 88);
     u8 idx = (cnt == T_H_STAT_SIZE) ? (u8)(rand() % T_H_STAT_SIZE) : cnt;
 
+    // 随机选择数据范围,覆盖曲线显示的各种分支:
+    //   0: 20~30°C / 40~60%  极差 44 字符 > 30,max+1 收进第 50 列
+    //   1: 24~24°C / 55~60%  极差 4 字符 < 8,放大到 8 字符(整数部分相同)
+    //   2: -5~35°C / 10~90%  极差 164 字符 > 48,压缩到 48 字符,横线最短 2 字符
+    //   3: 25~30°C / 40~60%  极差 24 字符,默认从第 20 列起画
+    //   4: -20~5°C / 10~90%  负温标注 + 压缩到 48 字符
+    u8 sc = (u8)(rand() % 5);
+    s8 t_lo, t_hi;
+    u8 h_lo, h_hi;
+    switch (sc)
+    {
+        case 0: t_lo = 20; t_hi = 30; h_lo = 40; h_hi = 60; break;
+        case 1: t_lo = 24; t_hi = 24; h_lo = 55; h_hi = 60; break;
+        case 2: t_lo = -5; t_hi = 35; h_lo = 10; h_hi = 90; break;
+        case 3: t_lo = 25; t_hi = 30; h_lo = 40; h_hi = 60; break;
+        default: t_lo = -20; t_hi = 5; h_lo = 10; h_hi = 90; break;
+    }
+    u8 t_span = (u8)(t_hi - t_lo + 1);
+    u8 h_span = (u8)(h_hi - h_lo + 1);
+
     t_h_stat_init();
 
     // 起点时间:任意半小时
@@ -294,15 +320,14 @@ void t_h_stat_test(void)
     min_start = (u8)((rand() & 1) ? 30 : 0);
     day_start = 1 + (u8)(rand() % 20);
 
-    // 装入随机数据:温度 20.0~30.0°C,湿度 40~60%。
-    // 与真实存储布局一致:写满时第 k 条(0=最旧)在下标 (idx+k)%96,未写满时在下标 k
+    // 装入随机数据。与真实存储布局一致:写满时第 k 条(0=最旧)在下标 (idx+k)%96,未写满时在下标 k
     __disable_irq();
     for (u8 k = 0; k < cnt; k++)
     {
         u8 i = (cnt == T_H_STAT_SIZE) ? (u8)((idx + k) % T_H_STAT_SIZE) : k;
-        t_h_stat[i].ti = (s8)(20 + (rand() % 11)); // 20~30°C
+        t_h_stat[i].ti = (s8)(t_lo + rand() % t_span);
         t_h_stat[i].td = (u8)(rand() % 10);
-        t_h_stat[i].hi = (u8)(40 + (rand() % 21)); // 40~60%
+        t_h_stat[i].hi = (u8)(h_lo + rand() % h_span);
     }
     t_h_stat_cnt = cnt;
     t_h_stat_idx = idx;
@@ -313,7 +338,8 @@ void t_h_stat_test(void)
     for (u8 k = 0; k < cnt; k++)
         t_h_advance_30min(&h_curr, &min_curr, &day_curr);
 
-    show_printf("t_h_stat_test: %d 条, %d日 %d:%02d ~ %d日 %d:%02d\r\n",
-                cnt, day_start, h_start, min_start, day_curr, h_curr, min_curr);
+    show_printf("t_h_stat_test: %d 条, 场景 %d (%d~%d°C, %d~%d%%), %d日 %d:%02d ~ %d日 %d:%02d\r\n",
+                cnt, sc, (int)t_lo, (int)t_hi, h_lo, h_hi,
+                day_start, h_start, min_start, day_curr, h_curr, min_curr);
     t_h_show_flag = true; // 触发 t_h_stat_show_task 逐行打印
 }
