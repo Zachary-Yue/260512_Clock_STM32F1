@@ -8,10 +8,12 @@
 #define DHT11_LOW		        0
 
 #define DHT11_TIMEOUT_ms        3
-
+#define DHT11_ERROR_CNT_MAX     10
 #define dht11_delay_us(x)       sys_delay_us(x)
 
 u8 hum_int = 0;
+bool hum_error = false;
+static u8 hum_error_cnt = 0;
 
 /**
  * @brief DTH读取一个字节
@@ -64,7 +66,8 @@ void dht11_task(void)
         DHT11_W(0);
         task_delay(18);
 
-        SYS_ENTER_CRITICAL();
+        // 不知道为什么，中断那点延时几乎不影响时序。和 51 的情况不同。这里可以不需要进入临界。
+        // SYS_ENTER_CRITICAL();
 
         // 拉高总线 40us，DHT11 响应信号
         DHT11_W(1);
@@ -95,11 +98,20 @@ void dht11_task(void)
                 res[3] = Dht11_ReadByte();
                 check  = Dht11_ReadByte();
 
-                SYS_EXIT_CRITICAL();
+                // SYS_EXIT_CRITICAL();
 
-                if (check == (u8)(res[0] + res[1] + res[2] + res[3]))
-                {
+                if (check == (u8)(res[0] + res[1] + res[2] + res[3])) {
                     hum_int = res[0];
+                    hum_error_cnt = 0;
+                    hum_error = false;
+                }
+                else {
+                    if (hum_error_cnt < DHT11_ERROR_CNT_MAX) {
+                        hum_error_cnt++;
+                    }
+                    else {
+                        hum_error = true;
+                    }
                 }
             }
 
@@ -107,8 +119,14 @@ void dht11_task(void)
         }
         else {
 retry:
-            SYS_EXIT_CRITICAL();
+            // SYS_EXIT_CRITICAL();
             task_delay(200); // 如果 DHT11 没有响应，延时 200ms 后重试
+            if (hum_error_cnt < DHT11_ERROR_CNT_MAX) {
+                hum_error_cnt++;
+            }
+            else {
+                hum_error = true;
+            }
         }
     }
     task_loop(1);

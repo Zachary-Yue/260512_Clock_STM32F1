@@ -62,8 +62,11 @@ static u16 th_k = 0;        // 当前行号:0..2*snap_cnt-1,前半是温度,后�
 static u8 th_h, th_m, th_d; // 当前行的时间(从最旧数据的时间开始,每行推进 30 分钟)
 static u32 th_ts = 0;       // 最近一次成功输出的 tick,发送卡死时超时跳出
 static float t_scale;       // 温度曲线缩放系数(默认 1 = 0.25°C/字符)
-static s8 t_min_i;          // 温度整数部分最小值(曲线左基准)
-static u8 t_base;           // 最小值对应的横线列(默认 20,超宽时收缩到 2)
+static s16 t_min_v10;       // 温度最小值 ×10(带符号小数,曲线左基准)
+static u8 t_base;           // 温度最小值对应的横线列(默认 20,超宽时收缩到 2)
+static float h_scale;       // 湿度缩放系数(2.0/1.0/0.5 = 0.5%/1%/2% 每字符)
+static u8 h_min_h;          // 湿度最小值(左基准)
+static u8 h_base;           // 湿度最小值对应的横线列(默认 20,超宽时收缩到 0)
 
 bool t_h_show_flag = false;
 
@@ -132,37 +135,53 @@ static u8 t_h_snap_at(u8 k)
     return i;
 }
 
-// 计算温度曲线显示参数(湿度曲线按 2%/字符直接映射,无需参数)。
-// 以温度整数部分的最小/最大值为基准,显示范围 = (max+1)-min 度,默认 1 字符 = 0.25°C。
-// 显示范围(极差)限制在 [8, 48] 字符,超出则整体缩放;最小值默认映射到第 20 列,
-// 若 20 + 极差 > 50,则把 max+1 映射到第 50 列(最小值随之收缩到 2 ~ 20 列)
+// 计算温/湿度曲线显示参数。
+// 温度:小数参与极差。v10 = ti×10 ± td(-5.3°C → -53,负温整数向零截断、小数取绝对值,
+// 故负温用减),只做整数比较、不逐点浮点。显示范围(极差)限制在 [10, 48] 字符
+// (2.5°C ~ 12°C),超出则整体缩放;最小值默认映射到第 20 列,若 20 + 极差 > 50,
+// 则把最大值映射到第 50 列(最小值随之收缩到 2 ~ 20 列)。极差为 0 时 t_scale = 0,
+// 所有点画在第 20 列(除零保护)。
+// 湿度:整数极差分档乘性缩放(0.5%/1%/2% 每字符),无字符数下限,基准列规则同温度。
 static void t_h_curve_calc(void)
 {
-    s8 min_i = 0, max_i = 0;
+    s16 v10_min = 0x7FFF, v10_max = -0x8000;
     for (u8 k = 0; k < snap_cnt; k++)
     {
-        s8 v = t_h_snap[t_h_snap_at(k)].ti;
-        if (k == 0)
-        {
-            min_i = max_i = v;
-            continue;
-        }
-        if (v < min_i) min_i = v;
-        if (v > max_i) max_i = v;
+        u8 i = t_h_snap_at(k);
+        s16 v10 = (s16)t_h_snap[i].ti * 10 + ((t_h_snap[i].ti < 0) ? -(s16)t_h_snap[i].td : (s16)t_h_snap[i].td);
+        if (v10 < v10_min) v10_min = v10;
+        if (v10 > v10_max) v10_max = v10;
     }
+    t_min_v10 = v10_min;
 
-    float range_chars = (float)((int)max_i + 1 - (int)min_i) * 4.0f; // (max+1-min)°C × 4 字符/°C
+    float range_chars = (float)(v10_max - v10_min) * 0.4f; // 0.1°C × 4 字符/°C
     float scaled = range_chars;
-    if (range_chars < 8.0f)       scaled = 8.0f;  // 极差 < 2°C:放大到 8 字符
-    else if (range_chars > 48.0f) scaled = 48.0f; // 极差 > 12°C:压缩到 48 字符
-    t_scale = scaled / range_chars;               // range_chars >= 4,不会除零
+    if (range_chars < 10.0f)      scaled = 10.0f;  // 极差 < 2.5°C:放大到 10 字符
+    else if (range_chars > 48.0f) scaled = 48.0f;  // 极差 > 12°C:压缩到 48 字符
+    // 极差=0(所有样本完全相同)时 t_scale=0,所有点画在 t_base 列
+    t_scale = (range_chars > 0.0f) ? scaled / range_chars : 0.0f;
     t_base = (20.0f + scaled <= 50.0f) ? 20 : (u8)(50.0f - scaled + 0.5f);
-    t_min_i = min_i;
+
+    u8 h_min = 100, h_max = 0;
+    for (u8 k = 0; k < snap_cnt; k++)
+    {
+        u8 v = t_h_snap[t_h_snap_at(k)].hi;
+        if (v < h_min) h_min = v;
+        if (v > h_max) h_max = v;
+    }
+    u8 h_range = h_max - h_min;
+    if (h_range < 10)        h_scale = 2.0f;  // 0.5%/字符
+    else if (h_range <= 50)  h_scale = 1.0f;  // 1%/字符
+    else                     h_scale = 0.5f;  // 2%/字符
+    float h_chars = (float)h_range * h_scale;
+    h_base = (20.0f + h_chars <= 50.0f) ? 20 : (u8)(50.0f - h_chars + 0.5f);
+    h_min_h = h_min;
 }
 
-// 打印一行样本: 时间 + 曲线条 + 数值标注 + (零点日期标记)。
+// 打印一行样本: 时间 + 曲线条 + 数值标注 + (日期标记)。
 // 曲线条最多 50 字符,数值标注紧跟在横线后面(空一格);日期固定写在第 62(湿度)/66(温度)列,
-// 即 50 字符曲线区 + 4/8 字符标注块之后,与横线长度无关
+// 即 50 字符曲线区 + 4/8 字符标注块之后,与横线长度无关。
+// day_mark 在两段曲线的首行与跨零点行(00:00)置位;首行恰为 00:00 时只打印一次日期
 static void t_h_print_line(u8 h, u8 m, u8 d, bool day_mark, u8 pos, int v_int, int v_dec, bool is_hum)
 {
     char line[96];
@@ -254,21 +273,22 @@ void t_h_stat_show_task(void)
                 u8 i = t_h_snap_at((u8)th_k);
                 s8 ti = t_h_snap[i].ti;
                 u8 td = t_h_snap[i].td;
-                float rel = ((float)((int)ti - (int)t_min_i) + (float)td * 0.1f) * 4.0f * t_scale;
+                float rel = ((float)((s16)ti * 10 + ((ti < 0) ? -(s16)td : (s16)td) - t_min_v10)) * 0.1f * 4.0f * t_scale;
                 u8 pos = (u8)(t_base + rel + 0.5f);
                 if (pos < 2) pos = 2;
                 if (pos > 50) pos = 50;
                 t_h_print_line(th_h, th_m, th_d,
-                               th_h == 0 && th_m == 0,
+                               th_k == 0 || (th_h == 0 && th_m == 0),   // 段首行 or 零点行
                                pos, ti, td, false);
             }
             else
             {
                 u8 i = t_h_snap_at((u8)(th_k - (u16)snap_cnt));
-                u8 pos = (u8)((float)t_h_snap[i].hi * 0.5f + 0.5f);
+                u8 pos = (u8)((float)h_base + (float)(t_h_snap[i].hi - h_min_h) * h_scale + 0.5f);
+                if (pos < 2) pos = 2;
                 if (pos > 50) pos = 50;
                 t_h_print_line(th_h, th_m, th_d,
-                               th_h == 0 && th_m == 0,
+                               th_k == (u16)snap_cnt || (th_h == 0 && th_m == 0),   // 段首行 or 零点行
                                pos, t_h_snap[i].hi, 0, true);
             }
 
@@ -294,11 +314,11 @@ void t_h_stat_test(void)
     u8 idx = (cnt == T_H_STAT_SIZE) ? (u8)(rand() % T_H_STAT_SIZE) : cnt;
 
     // 随机选择数据范围,覆盖曲线显示的各种分支:
-    //   0: 20~30°C / 40~60%  极差 44 字符 > 30,max+1 收进第 50 列
-    //   1: 24~24°C / 55~60%  极差 4 字符 < 8,放大到 8 字符(整数部分相同)
-    //   2: -5~35°C / 10~90%  极差 164 字符 > 48,压缩到 48 字符,横线最短 2 字符
-    //   3: 25~30°C / 40~60%  极差 24 字符,默认从第 20 列起画
-    //   4: -20~5°C / 10~90%  负温标注 + 压缩到 48 字符
+    //   0: 20~30°C / 40~60%  温度极差 40 字符,20+40>50 基准收缩到第 10 列;湿度极差 20% 默认 1%/字符
+    //   1: 24~24°C / 55~60%  温度极差 4 字符 < 10,放大到 10 字符(整数部分相同);湿度极差 5% < 10 放大到 0.5%/字符
+    //   2: -5~35°C / 10~90%  温度极差 160 字符 > 48,压缩到 48 字符,横线最短 2 字符;湿度极差 80% > 50 压缩到 2%/字符
+    //   3: 25~30°C / 40~60%  温度极差 20 字符,默认从第 20 列起画
+    //   4: -20~5°C / 10~90%  负温标注(带符号小数)+ 压缩到 48 字符
     u8 sc = (u8)(rand() % 5);
     s8 t_lo, t_hi;
     u8 h_lo, h_hi;

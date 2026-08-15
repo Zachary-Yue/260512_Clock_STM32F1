@@ -52,5 +52,9 @@ void Page_Temp_Task(void)
     oled_show_num3216(OLED_ROW(3)-1, OLED_COL(7), 0, FONT_DOT3216);
     oled_show_num3216(OLED_ROW(3)-1, OLED_COL(8), t_deci_tmp, FONT_NUM3216_1);
 
-    oled_show_int(OLED_ROW(3)+1, OLED_COL(14), hum_int, 2, false);
+    if (hum_error) {
+        oled_show_string(OLED_ROW(3)+1, OLED_COL(14), "--");
+    } else {
+        oled_show_int(OLED_ROW(3)+1, OLED_COL(14), hum_int, 2, false);
+    }
 }
